@@ -2,3 +2,5 @@
 *.o
 *.out
 scheduling_simulator
+*.orig
+*.swp
