@@ -26,8 +26,18 @@ void command_handler()
 	case 'p':
 		printf("p\n");
 		break;
+	default:
+		printf("ERROR COMMAND\n");
 	}
 }
+
+void s_add(const char *t_n, const char t_q);
+
+void s_remove(const int pid);
+
+void s_start();
+
+void s_ps();
 
 void hw_suspend(int msec_10)
 {

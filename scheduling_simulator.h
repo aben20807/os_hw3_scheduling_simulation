@@ -14,6 +14,10 @@ enum TASK_STATE {
 };
 
 void command_handler();
+void s_add(const char *t_n, const char t_q);
+void s_remove(const int pid);
+void s_start();
+void s_ps();
 
 void hw_suspend(int msec_10);
 void hw_wakeup_pid(int pid);
