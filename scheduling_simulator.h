@@ -13,6 +13,8 @@ enum TASK_STATE {
 	TASK_TERMINATED
 };
 
+void command_handler();
+
 void hw_suspend(int msec_10);
 void hw_wakeup_pid(int pid);
 int hw_wakeup_taskname(char *task_name);
