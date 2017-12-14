@@ -2,6 +2,7 @@
 #define SCHEDULING_SIMULATOR_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <ucontext.h>
 #include <string.h>
 

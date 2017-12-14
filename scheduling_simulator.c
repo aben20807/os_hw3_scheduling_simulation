@@ -15,17 +15,16 @@ void command_handler()
 	fgets(command, 20, stdin);
 	switch (command[0]) {
 	case 'a':
-		printf("a\n");
-		printf("%s\n", get_argv(command, 1));
+		s_add(get_argv(command, 1), get_argv(command, 3)[0]);
 		break;
 	case 'r':
-		printf("r\n");
+		s_remove(atoi(get_argv(command, 1)));
 		break;
 	case 's':
-		printf("s\n");
+		s_start();
 		break;
 	case 'p':
-		printf("p\n");
+		s_ps();
 		break;
 	default:
 		printf("ERROR COMMAND\n");
@@ -53,13 +52,25 @@ char *get_argv(const char *command, const int num)
 	return "\0";
 }
 
-void s_add(const char *t_n, const char t_q);
+void s_add(const char *t_n, const char t_q)
+{
+	printf("name: %s\ntime: %c\n", t_n, t_q);
+}
 
-void s_remove(const int pid);
+void s_remove(const int pid)
+{
+	printf("pid: %d\n", pid);
+}
 
-void s_start();
+void s_start()
+{
+	printf("simulating...\n");
+}
 
-void s_ps();
+void s_ps()
+{
+	printf("ps\n");
+}
 
 void hw_suspend(int msec_10)
 {
