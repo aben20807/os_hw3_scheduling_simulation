@@ -15,6 +15,12 @@ enum TASK_STATE {
 	TASK_TERMINATED
 };
 
+#define FREE(p) \
+    if(p != NULL){ \
+        free(p); \
+        p = NULL; \
+    }
+
 void command_handler();
 char *get_argv(const char *command, const int num);
 void s_add(const char *t_n, const char t_q);

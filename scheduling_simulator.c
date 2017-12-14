@@ -49,6 +49,7 @@ char *get_argv(const char *command, const int num)
 		}
 		argc++;
 	}
+	FREE(s);
 	return "\0";
 }
 
