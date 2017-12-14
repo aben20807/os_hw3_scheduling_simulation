@@ -16,6 +16,7 @@ void command_handler()
 	switch (command[0]) {
 	case 'a':
 		printf("a\n");
+		printf("%s\n", get_argv(command, 1));
 		break;
 	case 'r':
 		printf("r\n");
@@ -29,6 +30,27 @@ void command_handler()
 	default:
 		printf("ERROR COMMAND\n");
 	}
+}
+
+char *get_argv(const char *command, const int num)
+{
+	char delim[] = " ";
+	// copy string for split
+	char *s = (char *)strndup(command, 20);
+	// change '\n' into '\0'
+	char *pos;
+	if ((pos = strchr(s, '\n')) != NULL)
+		* pos = '\0';
+	// split
+	char *token;
+	int argc = 0;
+	for (token = strsep(&s, delim); token != NULL; token = strsep(&s, delim)) {
+		if (argc == num) {
+			return token;
+		}
+		argc++;
+	}
+	return "\0";
 }
 
 void s_add(const char *t_n, const char t_q);

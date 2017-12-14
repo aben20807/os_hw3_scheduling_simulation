@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <ucontext.h>
+#include <string.h>
 
 #include "task.h"
 
@@ -14,6 +15,7 @@ enum TASK_STATE {
 };
 
 void command_handler();
+char *get_argv(const char *command, const int num);
 void s_add(const char *t_n, const char t_q);
 void s_remove(const int pid);
 void s_start();
