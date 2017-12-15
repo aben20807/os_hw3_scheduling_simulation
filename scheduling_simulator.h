@@ -21,12 +21,14 @@ enum TASK_STATE {
         p = NULL; \
     }
 
+void init_singal_handle();
 void command_handler();
 char *get_argv(const char *command, const int num);
 void s_add(const char *t_n, const char t_q);
 void s_remove(const int pid);
 void s_start();
 void s_ps();
+void handler();
 
 void hw_suspend(int msec_10);
 void hw_wakeup_pid(int pid);

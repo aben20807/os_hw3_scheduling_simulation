@@ -2,10 +2,19 @@
 
 int main()
 {
+	init_singal_handle();
 	while (1) {
 		command_handler();
 	}
 	return 0;
+}
+
+void init_singal_handle()
+{
+	struct sigaction act;
+	act.sa_flags = 0;
+	act.sa_handler = handler;
+	sigaction(SIGTSTP, &act, NULL);
 }
 
 void command_handler()
@@ -66,11 +75,23 @@ void s_remove(const int pid)
 void s_start()
 {
 	printf("simulating...\n");
+	while (1) {
+		printf("0");
+	}
 }
 
 void s_ps()
 {
 	printf("ps\n");
+}
+
+void handler(int signum)
+{
+	if (signum == SIGTSTP) {
+		printf("ctrl-z\n");
+		char c;
+		scanf("%c", &c);
+	}
 }
 
 void hw_suspend(int msec_10)
