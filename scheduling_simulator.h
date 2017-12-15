@@ -21,6 +21,9 @@ enum TASK_STATE {
         p = NULL; \
     }
 
+/**/
+ucontext_t _main;
+
 void init_singal_handle();
 void command_handler();
 char *get_argv(const char *command, const int num);
@@ -34,5 +37,7 @@ void hw_suspend(int msec_10);
 void hw_wakeup_pid(int pid);
 int hw_wakeup_taskname(char *task_name);
 int hw_task_create(char *task_name);
+
+void task_t(void);
 
 #endif

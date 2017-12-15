@@ -2,10 +2,15 @@
 
 int main()
 {
+	printf("start\n");
+
 	init_singal_handle();
-	while (1) {
-		command_handler();
-	}
+	hw_task_create("task_t");
+	// while (1) {
+	//     command_handler();
+	// }
+
+	printf("finished\n");
 	return 0;
 }
 
@@ -111,5 +116,43 @@ int hw_wakeup_taskname(char *task_name)
 
 int hw_task_create(char *task_name)
 {
+	char stack[1024 * 128];
+	ucontext_t task;
+
+	getcontext(&task);
+	task.uc_stack.ss_sp = stack;
+	task.uc_stack.ss_size = sizeof(stack);
+	task.uc_stack.ss_flags = 0;
+	getcontext(&_main);
+	_main.uc_stack.ss_sp = stack;
+	_main.uc_stack.ss_size = sizeof(stack);
+	_main.uc_stack.ss_flags = 0;
+	makecontext(&_main, (void (*)(void))main, 0);
+	task.uc_link = &_main;
+
+	if (strcmp(task_name, "task1") == 0) {
+		makecontext(&task, (void (*)(void))task1, 0);
+	} else if (strcmp(task_name, "task2") == 0) {
+		makecontext(&task, (void (*)(void))task2, 0);
+	} else if (strcmp(task_name, "task3") == 0) {
+		makecontext(&task, (void (*)(void))task3, 0);
+	} else if (strcmp(task_name, "task4") == 0) {
+		makecontext(&task, (void (*)(void))task4, 0);
+	} else if (strcmp(task_name, "task5") == 0) {
+		makecontext(&task, (void (*)(void))task5, 0);
+	} else if (strcmp(task_name, "task6") == 0) {
+		makecontext(&task, (void (*)(void))task6, 0);
+	} else if (strcmp(task_name, "task_t") == 0) {
+		makecontext(&task, (void (*)(void))task_t, 0);
+	} else {
+		return -1;
+	}
+	// setcontext(&task);
+	swapcontext(&_main, &task);
 	return 0; // the pid of created task name
+}
+
+void task_t(void)
+{
+	printf("test~\n");
 }
