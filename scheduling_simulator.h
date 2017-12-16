@@ -62,6 +62,9 @@ typedef struct Queue {
 
 /* Global Variable */
 ucontext_t _main;
+int pid_count;
+Queue *ready_queue;
+Queue *waiting_queue;
 
 void init_singal_handle();
 void command_handler();
@@ -86,5 +89,6 @@ bool enq(Queue *self, node *item);
 node *deq(Queue *self);
 bool display(Queue *self);
 node *create_node(PCB *pcb);
+PCB *create_pcb(const char *name, const char t_q, const ucontext_t context);
 
 #endif

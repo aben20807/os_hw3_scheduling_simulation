@@ -4,6 +4,8 @@ int main()
 {
 	printf("start\n");
 
+	pid_count = 1;
+	init(&ready_queue);
 	init_singal_handle();
 	hw_task_create("task_t");
 	// while (1) {
@@ -172,7 +174,7 @@ int size(Queue *self)
 }
 
 /*
- * Insert a node which cantains a mail_t into queue at head.
+ * Insert a node which cantains a PCB into queue at head.
  */
 bool enq(Queue *self, node *item)
 {
@@ -192,7 +194,7 @@ bool enq(Queue *self, node *item)
 }
 
 /*
- * Remove a node which cantains a mail_t from queue at tail.
+ * Remove a node which cantains a PCB from queue at tail.
  */
 node *deq(Queue *self)
 {
@@ -242,6 +244,19 @@ node *create_node(PCB *pcb)
 	tmp->pcb = pcb;
 	tmp->prev = NULL;
 	tmp->next = NULL;
+	return tmp;
+}
+
+PCB *create_pcb(const char *name, const char t_q, const ucontext_t context)
+{
+	PCB *tmp = NULL;
+	CALLOC(tmp, sizeof(*tmp), 1);
+	tmp->pid = pid_count++;
+	strncpy(tmp->name, name, sizeof(tmp->name));
+	tmp->t_q = t_q;
+	tmp->state = TASK_READY;
+	tmp->q_t = 0;
+	tmp->context = context;
 	return tmp;
 }
 
