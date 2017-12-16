@@ -6,14 +6,37 @@ int main()
 
 	pid_count = 1;
 	init(&ready_queue);
+	init_main_context();
 	init_singal_handle();
+
 	hw_task_create("task_t");
+	hw_task_create("task_t");
+	hw_task_create("task_t");
+	hw_task_create("task_t");
+	node *t = ready_queue->deq(ready_queue);
+	swapcontext(&_main, &t->pcb->context);
+	t = ready_queue->deq(ready_queue);
+	swapcontext(&_main, &t->pcb->context);
+	t = ready_queue->deq(ready_queue);
+	swapcontext(&_main, &t->pcb->context);
+
+	ready_queue->display(ready_queue);
 	// while (1) {
 	//     command_handler();
 	// }
 
 	printf("finished\n");
 	return 0;
+}
+
+void init_main_context()
+{
+	getcontext(&_main);
+	_main.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	                            MAP_PRIVATE | MAP_ANON, -1, 0);
+	_main.uc_stack.ss_size = SIGSTKSZ;
+	_main.uc_stack.ss_flags = 0;
+	makecontext(&_main, (void (*)(void))main, 0);
 }
 
 void init_singal_handle()
@@ -118,18 +141,12 @@ int hw_wakeup_taskname(char *task_name)
 
 int hw_task_create(char *task_name)
 {
-	char stack[1024 * 128];
 	ucontext_t task;
-
 	getcontext(&task);
-	task.uc_stack.ss_sp = stack;
-	task.uc_stack.ss_size = sizeof(stack);
+	task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	                           MAP_PRIVATE | MAP_ANON, -1, 0);
+	task.uc_stack.ss_size = SIGSTKSZ;
 	task.uc_stack.ss_flags = 0;
-	getcontext(&_main);
-	_main.uc_stack.ss_sp = stack;
-	_main.uc_stack.ss_size = sizeof(stack);
-	_main.uc_stack.ss_flags = 0;
-	makecontext(&_main, (void (*)(void))main, 0);
 	task.uc_link = &_main;
 
 	if (strcmp(task_name, "task1") == 0) {
@@ -149,8 +166,7 @@ int hw_task_create(char *task_name)
 	} else {
 		return -1;
 	}
-	// setcontext(&task);
-	swapcontext(&_main, &task);
+	ready_queue->enq(ready_queue, create_node(create_pcb(task_name, 'S', task)));
 	return 0; // the pid of created task name
 }
 

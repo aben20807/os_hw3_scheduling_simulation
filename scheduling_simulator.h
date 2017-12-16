@@ -6,6 +6,7 @@
 #include <ucontext.h>
 #include <string.h>
 #include <stdbool.h>
+#include <sys/mman.h>
 
 #include "task.h"
 
@@ -66,6 +67,7 @@ int pid_count;
 Queue *ready_queue;
 Queue *waiting_queue;
 
+void init_main_context();
 void init_singal_handle();
 void command_handler();
 char *get_argv(const char *command, const int num);
