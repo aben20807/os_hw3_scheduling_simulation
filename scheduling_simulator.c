@@ -152,6 +152,99 @@ int hw_task_create(char *task_name)
 	return 0; // the pid of created task name
 }
 
+void init(Queue **q_ptr)
+{
+	Queue *q = NULL;
+	MALLOC(q, sizeof(Queue));
+	q->count = 0;
+	q->head = NULL;
+	q->tail = NULL;
+	q->size = size;
+	q->enq = enq;
+	q->deq = deq;
+	q->display = display;
+	*q_ptr = q;
+}
+
+int size(Queue *self)
+{
+	return self->count;
+}
+
+/*
+ * Insert a node which cantains a mail_t into queue at head.
+ */
+bool enq(Queue *self, node *item)
+{
+	if ((self == NULL) || (item == NULL)) {
+		return false;
+	}
+	if (self->size(self) == 0) {
+		self->head = item;
+		self->tail = item;
+	} else {
+		self->head->prev = item;
+		item->next = self->head;
+		self->head = item;
+	}
+	self->count++;
+	return true;
+}
+
+/*
+ * Remove a node which cantains a mail_t from queue at tail.
+ */
+node *deq(Queue *self)
+{
+	if ((self == NULL) || self->size(self) == 0) {
+		// printf("0\n");
+		return NULL;
+	}
+	node *tmp = self->tail;
+	if (self->size(self) != 1) {
+		self->tail = self->tail->prev;
+		self->tail->next = NULL;
+	} else {
+		self->tail = self->head;
+		self->count = 0;
+		return tmp;
+	}
+	self->count--;
+	return tmp;
+}
+
+/*
+ * Display all nodes in queue from head to tail.
+ */
+bool display(Queue *self)
+{
+	if (self == NULL || self->size(self) == 0) {
+		return false;
+	}
+	printf("head->\n");
+	node *curr = self->head;
+	int count = 0;
+	while (curr != NULL) {
+		printf("%d:\n%d\n%s\n",
+		       count++,
+		       curr->pcb->pid,
+		       curr->pcb->name);
+		curr = curr->next;
+	}
+	printf("<-tail\n");
+	return true;
+}
+
+node *create_node(PCB *pcb)
+{
+	node *tmp = NULL;
+	CALLOC(tmp, sizeof(*tmp), 1);
+	tmp->pcb = pcb;
+	tmp->prev = NULL;
+	tmp->next = NULL;
+	return tmp;
+}
+
 void task_t(void)
 {
 	printf("test~\n");
