@@ -92,17 +92,17 @@ char *get_argv(const char *command, const int num)
 	return "\0";
 }
 
-void s_add(const char *t_n, const char t_q)
+void sched_add(const char *t_n, const char t_q)
 {
 	printf("name: %s\ntime: %c\n", t_n, t_q);
 }
 
-void s_remove(const int pid)
+void sched_remove(const int pid)
 {
 	printf("pid: %d\n", pid);
 }
 
-void s_start()
+void sched_start()
 {
 	printf("simulating...\n");
 	while (1) {
@@ -110,7 +110,7 @@ void s_start()
 	}
 }
 
-void s_ps()
+void sched_ps()
 {
 	printf("ps\n");
 }
