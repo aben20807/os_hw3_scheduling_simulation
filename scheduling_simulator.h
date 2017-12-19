@@ -71,7 +71,7 @@ void init_main_context();
 void init_singal_handle();
 void command_handler();
 char *get_argv(const char *command, const int num);
-void sched_add(const char *t_n, const char t_q);
+int sched_add(const char *t_n, const char t_q);
 void sched_remove(const int pid);
 void sched_start();
 void sched_ps();

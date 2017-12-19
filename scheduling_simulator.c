@@ -54,16 +54,16 @@ void command_handler()
 	fgets(command, 20, stdin);
 	switch (command[0]) {
 	case 'a':
-		s_add(get_argv(command, 1), get_argv(command, 3)[0]);
+		sched_add(get_argv(command, 1), get_argv(command, 3)[0]);
 		break;
 	case 'r':
-		s_remove(atoi(get_argv(command, 1)));
+		sched_remove(atoi(get_argv(command, 1)));
 		break;
 	case 's':
-		s_start();
+		sched_start();
 		break;
 	case 'p':
-		s_ps();
+		sched_ps();
 		break;
 	default:
 		printf("ERROR COMMAND\n");
@@ -92,9 +92,37 @@ char *get_argv(const char *command, const int num)
 	return "\0";
 }
 
-void sched_add(const char *t_n, const char t_q)
+int sched_add(const char *t_n, const char t_q)
 {
 	printf("name: %s\ntime: %c\n", t_n, t_q);
+	ucontext_t task;
+	getcontext(&task);
+	task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	                           MAP_PRIVATE | MAP_ANON, -1, 0);
+	task.uc_stack.ss_size = SIGSTKSZ;
+	task.uc_stack.ss_flags = 0;
+	task.uc_link = &_main;
+
+	if (strcmp(t_n, "task1") == 0) {
+		makecontext(&task, (void (*)(void))task1, 0);
+	} else if (strcmp(t_n, "task2") == 0) {
+		makecontext(&task, (void (*)(void))task2, 0);
+	} else if (strcmp(t_n, "task3") == 0) {
+		makecontext(&task, (void (*)(void))task3, 0);
+	} else if (strcmp(t_n, "task4") == 0) {
+		makecontext(&task, (void (*)(void))task4, 0);
+	} else if (strcmp(t_n, "task5") == 0) {
+		makecontext(&task, (void (*)(void))task5, 0);
+	} else if (strcmp(t_n, "task6") == 0) {
+		makecontext(&task, (void (*)(void))task6, 0);
+	} else if (strcmp(t_n, "task_t") == 0) {
+		makecontext(&task, (void (*)(void))task_t, 0);
+	} else {
+		return -1;
+	}
+	PCB *tmp = create_pcb(t_n, t_q, task);
+	ready_queue->enq(ready_queue, create_node(tmp));
+	return tmp->pid;
 }
 
 void sched_remove(const int pid)
@@ -141,33 +169,8 @@ int hw_wakeup_taskname(char *task_name)
 
 int hw_task_create(char *task_name)
 {
-	ucontext_t task;
-	getcontext(&task);
-	task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
-	                           MAP_PRIVATE | MAP_ANON, -1, 0);
-	task.uc_stack.ss_size = SIGSTKSZ;
-	task.uc_stack.ss_flags = 0;
-	task.uc_link = &_main;
-
-	if (strcmp(task_name, "task1") == 0) {
-		makecontext(&task, (void (*)(void))task1, 0);
-	} else if (strcmp(task_name, "task2") == 0) {
-		makecontext(&task, (void (*)(void))task2, 0);
-	} else if (strcmp(task_name, "task3") == 0) {
-		makecontext(&task, (void (*)(void))task3, 0);
-	} else if (strcmp(task_name, "task4") == 0) {
-		makecontext(&task, (void (*)(void))task4, 0);
-	} else if (strcmp(task_name, "task5") == 0) {
-		makecontext(&task, (void (*)(void))task5, 0);
-	} else if (strcmp(task_name, "task6") == 0) {
-		makecontext(&task, (void (*)(void))task6, 0);
-	} else if (strcmp(task_name, "task_t") == 0) {
-		makecontext(&task, (void (*)(void))task_t, 0);
-	} else {
-		return -1;
-	}
-	ready_queue->enq(ready_queue, create_node(create_pcb(task_name, 'S', task)));
-	return 0; // the pid of created task name
+	return sched_add(task_name, 'S');
+	// return 0; // the pid of created task name
 }
 
 void init(Queue **q_ptr)
