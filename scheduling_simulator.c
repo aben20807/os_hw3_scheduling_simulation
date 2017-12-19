@@ -13,17 +13,17 @@ int main()
 	hw_task_create("task_t");
 	hw_task_create("task_t");
 	hw_task_create("task_t");
-	node *t = ready_queue->deq(ready_queue);
-	swapcontext(&_main, &t->pcb->context);
-	t = ready_queue->deq(ready_queue);
-	swapcontext(&_main, &t->pcb->context);
-	t = ready_queue->deq(ready_queue);
-	swapcontext(&_main, &t->pcb->context);
+	// node *t = ready_queue->deq(ready_queue);
+	// swapcontext(&_main, &t->pcb->context);
+	// t = ready_queue->deq(ready_queue);
+	// swapcontext(&_main, &t->pcb->context);
+	// t = ready_queue->deq(ready_queue);
+	// swapcontext(&_main, &t->pcb->context);
 
 	ready_queue->display(ready_queue);
-	// while (1) {
-	//     command_handler();
-	// }
+	while (1) {
+		command_handler();
+	}
 
 	printf("finished\n");
 	return 0;
@@ -140,7 +140,36 @@ void sched_start()
 
 void sched_ps()
 {
+	// TODO other queues
 	printf("ps\n");
+	if (ready_queue == NULL || ready_queue->size(ready_queue) == 0) {
+		return;
+	}
+	node *curr = ready_queue->head;
+	while (curr != NULL) {
+		printf("%d\t%s\t%s\t%d\n",
+		       curr->pcb->pid,
+		       curr->pcb->name,
+		       get_pcb_state(curr->pcb->state),
+		       curr->pcb->q_t);
+		curr = curr->next;
+	}
+}
+
+char *get_pcb_state(const int state)
+{
+	switch (state) {
+	case TASK_RUNNING:
+		return "TASK_RUNNING";
+	case TASK_READY:
+		return "TASK_READY";
+	case TASK_WAITING:
+		return "TASK_WAITING";
+	case TASK_TERMINATED:
+		return "TASK_TERMINATED";
+	default:
+		return "";
+	}
 }
 
 void handler(int signum)

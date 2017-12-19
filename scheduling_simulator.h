@@ -76,6 +76,7 @@ void sched_remove(const int pid);
 void sched_start();
 void sched_ps();
 void handler();
+char *get_pcb_state(const int state);
 
 void hw_suspend(int msec_10);
 void hw_wakeup_pid(int pid);
