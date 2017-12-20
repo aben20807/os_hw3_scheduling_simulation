@@ -41,10 +41,11 @@ void init_main_context()
 
 void init_singal_handle()
 {
-	struct sigaction act;
-	act.sa_flags = 0;
-	act.sa_handler = handler;
-	sigaction(SIGTSTP, &act, NULL);
+	// struct sigaction act;
+	// act.sa_flags = 0;
+	// act.sa_handler = handler;
+	// sigaction(SIGTSTP, &act, NULL);
+	signal(SIGTSTP, handler);
 }
 
 void command_handler()
@@ -94,7 +95,7 @@ char *get_argv(const char *command, const int num)
 
 int sched_add(const char *t_n, const char t_q)
 {
-	printf("name: %s\ntime: %c\n", t_n, t_q);
+	// printf("name: %s\ntime: %c\n", t_n, t_q);
 	ucontext_t task;
 	getcontext(&task);
 	task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
@@ -174,11 +175,12 @@ char *get_pcb_state(const int state)
 
 void handler(int signum)
 {
+	ucontext_t task;
+	getcontext(&task);
 	if (signum == SIGTSTP) {
 		printf("ctrl-z\n");
-		char c;
-		scanf("%c", &c);
 	}
+	swapcontext(&task, &_main);
 }
 
 void hw_suspend(int msec_10)

@@ -63,6 +63,7 @@ typedef struct Queue {
 
 /* Global Variable */
 ucontext_t _main;
+ucontext_t _now;
 int pid_count;
 Queue *ready_queue;
 Queue *waiting_queue;
