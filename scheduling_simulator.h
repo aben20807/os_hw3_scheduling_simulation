@@ -69,14 +69,13 @@ Queue *ready_queue;
 Queue *waiting_queue;
 
 void init_main_context();
-void init_singal_handle();
 void command_handler();
 char *get_argv(const char *command, const int num);
 int sched_add(const char *t_n, const char t_q);
 void sched_remove(const int pid);
 void sched_start();
 void sched_ps();
-void handler();
+void signal_handler();
 char *get_pcb_state(const int state);
 
 void hw_suspend(int msec_10);

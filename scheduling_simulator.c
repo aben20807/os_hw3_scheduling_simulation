@@ -7,7 +7,7 @@ int main()
 	pid_count = 1;
 	init(&ready_queue);
 	init_main_context();
-	init_singal_handle();
+	signal(SIGTSTP, signal_handler);
 
 	hw_task_create("task_t");
 	hw_task_create("task_t");
@@ -37,15 +37,6 @@ void init_main_context()
 	_main.uc_stack.ss_size = SIGSTKSZ;
 	_main.uc_stack.ss_flags = 0;
 	makecontext(&_main, (void (*)(void))main, 0);
-}
-
-void init_singal_handle()
-{
-	// struct sigaction act;
-	// act.sa_flags = 0;
-	// act.sa_handler = handler;
-	// sigaction(SIGTSTP, &act, NULL);
-	signal(SIGTSTP, handler);
 }
 
 void command_handler()
@@ -173,7 +164,7 @@ char *get_pcb_state(const int state)
 	}
 }
 
-void handler(int signum)
+void signal_handler(int signum)
 {
 	ucontext_t task;
 	getcontext(&task);
