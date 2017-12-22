@@ -64,8 +64,10 @@ typedef struct Queue {
 } Queue;
 
 /* Global Variable */
-ucontext_t _main;
-ucontext_t _now;
+ucontext_t main_ctx;
+ucontext_t now_ctx;
+PCB *now_pcb;
+static volatile sig_atomic_t switch_context;
 int pid_count;
 Queue *ready_queue;
 Queue *waiting_queue;

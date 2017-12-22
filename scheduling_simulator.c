@@ -7,7 +7,9 @@ int main()
 	pid_count = 1;
 	init(&ready_queue);
 	init_main_context();
+	switch_context = 0;
 
+	/*timer*/
 	struct itimerval it;
 	memset(&it, 0, sizeof it);
 	it.it_interval.tv_sec = 2;
@@ -24,11 +26,11 @@ int main()
 	hw_task_create("task_t");
 	hw_task_create("task_t");
 	// node *t = ready_queue->deq(ready_queue);
-	// swapcontext(&_main, &t->pcb->context);
+	// swapcontext(&main_ctx, &t->pcb->context);
 	// t = ready_queue->deq(ready_queue);
-	// swapcontext(&_main, &t->pcb->context);
+	// swapcontext(&main_ctx, &t->pcb->context);
 	// t = ready_queue->deq(ready_queue);
-	// swapcontext(&_main, &t->pcb->context);
+	// swapcontext(&main_ctx, &t->pcb->context);
 
 	// ready_queue->display(ready_queue);
 	while (1) {
@@ -41,12 +43,12 @@ int main()
 
 void init_main_context()
 {
-	getcontext(&_main);
-	_main.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
-	                            MAP_PRIVATE | MAP_ANON, -1, 0);
-	_main.uc_stack.ss_size = SIGSTKSZ;
-	_main.uc_stack.ss_flags = 0;
-	makecontext(&_main, (void (*)(void))main, 0);
+	getcontext(&main_ctx);
+	main_ctx.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	                               MAP_PRIVATE | MAP_ANON, -1, 0);
+	main_ctx.uc_stack.ss_size = SIGSTKSZ;
+	main_ctx.uc_stack.ss_flags = 0;
+	makecontext(&main_ctx, (void (*)(void))main, 0);
 }
 
 void command_handler()
@@ -103,7 +105,7 @@ int sched_add(const char *t_n, const char t_q)
 	                           MAP_PRIVATE | MAP_ANON, -1, 0);
 	task.uc_stack.ss_size = SIGSTKSZ;
 	task.uc_stack.ss_flags = 0;
-	task.uc_link = &_main;
+	task.uc_link = &main_ctx;
 
 	if (strcmp(t_n, "task1") == 0) {
 		makecontext(&task, (void (*)(void))task1, 0);
@@ -135,8 +137,15 @@ void sched_remove(const int pid)
 void sched_start()
 {
 	printf("simulating...\n");
-	while (1) {
-		printf("0");
+	while (ready_queue->size(ready_queue) != 0) {
+		if (switch_context == 1) {
+			switch_context = 0;
+			printf("deq\n");
+			PCB *tmp_pcb = ready_queue->deq(ready_queue)->pcb;
+			ucontext_t tmp_ctx = tmp_pcb->context;
+			getcontext(&main_ctx);
+			swapcontext(&main_ctx, &tmp_ctx);
+		}
 	}
 }
 
@@ -181,9 +190,10 @@ void signal_handler(int signum)
 	if (signum == SIGTSTP) {
 		printf("ctrl-z\n");
 	} else if (signum == SIGALRM) {
-		printf("time: %d\n", pid_count++);
+		// printf("time: %d\n", pid_count++);
+		switch_context = 1;
 	}
-	swapcontext(&task, &_main);
+	// swapcontext(&task, &main_ctx);
 }
 
 void hw_suspend(int msec_10)
