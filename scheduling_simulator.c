@@ -7,7 +7,17 @@ int main()
 	pid_count = 1;
 	init(&ready_queue);
 	init_main_context();
+
+	struct itimerval it;
+	memset(&it, 0, sizeof it);
+	it.it_interval.tv_sec = 2;
+	it.it_value.tv_sec = 2;
+	if (setitimer(ITIMER_REAL, &it, 0)) {
+		perror("setitimer");
+		exit(1);
+	}
 	signal(SIGTSTP, signal_handler);
+	signal(SIGALRM, signal_handler);
 
 	hw_task_create("task_t");
 	hw_task_create("task_t");
@@ -20,7 +30,7 @@ int main()
 	// t = ready_queue->deq(ready_queue);
 	// swapcontext(&_main, &t->pcb->context);
 
-	ready_queue->display(ready_queue);
+	// ready_queue->display(ready_queue);
 	while (1) {
 		command_handler();
 	}
@@ -170,6 +180,8 @@ void signal_handler(int signum)
 	getcontext(&task);
 	if (signum == SIGTSTP) {
 		printf("ctrl-z\n");
+	} else if (signum == SIGALRM) {
+		printf("time: %d\n", pid_count++);
 	}
 	swapcontext(&task, &_main);
 }
