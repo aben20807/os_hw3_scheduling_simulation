@@ -37,11 +37,12 @@ enum TASK_STATE {
 
 typedef struct PCB {
 	int pid;
+	int state;
+	int t_l;        // time left
+	int q_t;        // queueing time
+	ucontext_t ctx; // context
 	char name[10];
 	char t_q;       // time quantum
-	int state;
-	int q_t;        // queueing time
-	ucontext_t context;
 } PCB;
 
 /*
@@ -66,9 +67,14 @@ typedef struct Queue {
 /* Global Variable */
 ucontext_t main_ctx;
 ucontext_t now_ctx;
+ucontext_t tmout_ctx; // for function time_out_handler()
+ucontext_t ctrlz_ctx; // for function ctrlz_handler()
+ucontext_t sched_ctx; // for function scheduler()
+ucontext_t shell_ctx; // for function command_handler()
 PCB *now_pcb;
 static volatile sig_atomic_t switch_context;
 int pid_count;
+bool is_simulating;
 Queue *ready_queue;
 Queue *waiting_queue;
 
@@ -80,6 +86,7 @@ void sched_remove(const int pid);
 void sched_start();
 void sched_ps();
 void signal_handler();
+void scheduler();
 char *get_pcb_state(const int state);
 
 void hw_suspend(int msec_10);
@@ -88,6 +95,7 @@ int hw_wakeup_taskname(char *task_name);
 int hw_task_create(char *task_name);
 
 void task_t(void);
+void task_tt(void);
 
 /* Queue Function */
 void init(Queue **q_ptr);
