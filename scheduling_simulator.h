@@ -70,11 +70,13 @@ ucontext_t sighd_ctx; // for function signal_handler()
 ucontext_t sched_ctx; // for function scheduler()
 ucontext_t shell_ctx; // for function command_handler()
 PCB *now_pcb;
-static volatile sig_atomic_t switch_context;
 int pid_count;
 bool is_simulating;
+bool is_ctrlz;
 Queue *ready_queue;
 Queue *waiting_queue;
+struct itimerval it;
+sigset_t new, old, wait;
 
 void init_context();
 void command_handler();

@@ -7,8 +7,8 @@ int main()
 	pid_count = 1;
 	init(&ready_queue);
 	init_context();
-	switch_context = 0;
 	is_simulating = false;
+	is_ctrlz = false;
 
 	signal(SIGTSTP, signal_handler);
 	signal(SIGALRM, signal_handler);
@@ -17,9 +17,7 @@ int main()
 	sched_add("task_tt", 'S');
 
 	// ready_queue->display(ready_queue);
-	while (1) {
-		command_handler();
-	}
+	command_handler();
 
 	printf("finished\n");
 	return 0;
@@ -51,24 +49,26 @@ void init_context()
 
 void command_handler()
 {
-	printf("$ ");
-	char command[20];
-	fgets(command, 20, stdin);
-	switch (command[0]) {
-	case 'a':
-		sched_add(get_argv(command, 1), get_argv(command, 3)[0]);
-		break;
-	case 'r':
-		sched_remove(atoi(get_argv(command, 1)));
-		break;
-	case 's':
-		sched_start();
-		break;
-	case 'p':
-		sched_ps();
-		break;
-	default:
-		printf("ERROR COMMAND\n");
+	while (1) {
+		printf("$ ");
+		char command[20];
+		fgets(command, 20, stdin);
+		switch (command[0]) {
+		case 'a':
+			sched_add(get_argv(command, 1), get_argv(command, 3)[0]);
+			break;
+		case 'r':
+			sched_remove(atoi(get_argv(command, 1)));
+			break;
+		case 's':
+			sched_start();
+			break;
+		case 'p':
+			sched_ps();
+			break;
+		default:
+			printf("ERROR COMMAND\n");
+		}
 	}
 }
 
@@ -137,7 +137,12 @@ void sched_remove(const int pid)
 void sched_start()
 {
 	printf("simulating...\n");
-	setcontext(&sched_ctx);
+	if (is_ctrlz) {
+		is_ctrlz = false;
+		setcontext(&now_ctx);
+	} else {
+		setcontext(&sched_ctx);
+	}
 }
 
 void sched_ps()
@@ -177,10 +182,22 @@ char *get_pcb_state(const int state)
 void signal_handler(int signum)
 {
 	if (signum == SIGTSTP) {
+		is_ctrlz = true;
+		// sigset_t newset;
+		// sigset_t *newset_p;
+		// newset_p = &newset;
+		// sigemptyset(newset_p);
+		// sigaddset(newset_p, SIGALRM);
+		// sigprocmask (SIG_SETMASK, newset_p, NULL);
+		// sigaddset(&wait, SIGALRM); //SIGUSR1信号加入wait
+		// sigprocmask(SIG_BLOCK, &wait, &old);
+		// if (sigsuspend(&new) != -1)printf("sigsuspend error");
 		printf("ctrl-z\n");
+		swapcontext(&now_ctx, &shell_ctx);
 	} else if (signum == SIGALRM) {
 		is_simulating = true;
-		swapcontext(&now_pcb->ctx, &sched_ctx);
+		if (!is_ctrlz)
+			swapcontext(&now_pcb->ctx, &sched_ctx);
 	}
 }
 
@@ -194,9 +211,9 @@ void scheduler()
 		printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
 		/*timer*/
-		struct itimerval it;
 		memset(&it, 0, sizeof it);
 		it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
+		it.it_interval.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
 		if (setitimer(ITIMER_REAL, &it, 0)) {
 			perror("setitimer");
 			exit(1);
