@@ -100,7 +100,8 @@ void task_t(void);
 void task_tt(void);
 
 /* Queue Function */
-void init(Queue **q_ptr);
+void initq(Queue **q_ptr);
+void deleq(Queue **q_ptr);
 int size(Queue *self);
 bool enq(Queue *self, node *item);
 node *deq(Queue *self);

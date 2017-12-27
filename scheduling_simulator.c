@@ -5,7 +5,7 @@ int main()
 	// printf("start\n");
 
 	pid_count = 1;
-	init(&ready_queue);
+	initq(&ready_queue);
 	init_context();
 	is_simulating = false;
 	is_ctrlz = false;
@@ -67,10 +67,16 @@ void command_handler()
 		case 'p':
 			sched_ps();
 			break;
+		case 'e':
+			deleq(&ready_queue);
+			goto end;
+			break;
 		default:
 			printf("ERROR COMMAND\n");
 		}
 	}
+end:
+	;
 }
 
 char *get_argv(const char *command, const int num)
@@ -209,7 +215,7 @@ void scheduler()
 		now_pcb->state = TASK_READY;
 		ready_queue->enq(ready_queue, create_node(now_pcb));
 	}
-	while (ready_queue->size(ready_queue) != 0) {
+	while (ready_queue != NULL && ready_queue->size(ready_queue) != 0) {
 		printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
 		is_having_now = true;
@@ -249,7 +255,7 @@ int hw_task_create(char *task_name)
 	// return 0; // the pid of created task name
 }
 
-void init(Queue **q_ptr)
+void initq(Queue **q_ptr)
 {
 	Queue *q = NULL;
 	MALLOC(q, sizeof(Queue));
@@ -261,6 +267,21 @@ void init(Queue **q_ptr)
 	q->deq = deq;
 	q->display = display;
 	*q_ptr = q;
+}
+
+void deleq(Queue **q_ptr)
+{
+	if (*q_ptr == NULL || (*q_ptr)->size(*q_ptr) == 0) {
+		return;
+	}
+	node *curr = (*q_ptr)->head;
+	while (curr != NULL) {
+		node *tmp = curr;
+		(*q_ptr)->count--;
+		curr = curr->next;
+		FREE(tmp);
+	}
+	FREE(*q_ptr);
 }
 
 int size(Queue *self)
