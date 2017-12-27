@@ -85,7 +85,6 @@ void command_handler();
 char *get_argv(const char *command, const int num);
 int sched_add(const char *t_n, const char t_q);
 void sched_remove(const int pid);
-void sched_start();
 void sched_ps();
 void signal_handler();
 void store_running_task();

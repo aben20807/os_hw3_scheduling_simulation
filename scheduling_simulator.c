@@ -19,15 +19,6 @@ int main()
 
 	// ready_queue->display(ready_queue);
 
-	// ucontext_t task, gg_ctx;
-	// getcontext(&task);
-	// task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
-	//                            MAP_PRIVATE | MAP_ANON, -1, 0);
-	// task.uc_stack.ss_size = SIGSTKSZ;
-	// task.uc_stack.ss_flags = 0;
-	// task.uc_link = &terhd_ctx;
-	// makecontext(&task, task_tt, 0);
-	// swapcontext(&gg_ctx, &task);
 	command_handler();
 
 	printf("finished\n");
@@ -58,16 +49,10 @@ void init_context()
 	makecontext(&sighd_ctx, signal_handler, 0);
 
 	getcontext(&terhd_ctx);
-	// terhd_ctx.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
-	//                                 MAP_PRIVATE | MAP_ANON, -1, 0);
-	// terhd_ctx.uc_stack.ss_size = SIGSTKSZ;
-	// terhd_ctx.uc_stack.ss_flags = 0;
-	terhd_ctx.uc_stack.ss_size = 1024 * 1024 * 8;
-	terhd_ctx.uc_stack.ss_sp = malloc(1024 * 1024 * 8);
-	if (!terhd_ctx.uc_stack.ss_sp) {
-		perror("malloc");
-		exit(1);
-	}
+	terhd_ctx.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	                                MAP_PRIVATE | MAP_ANON, -1, 0);
+	terhd_ctx.uc_stack.ss_size = SIGSTKSZ;
+	terhd_ctx.uc_stack.ss_flags = 0;
 	makecontext(&terhd_ctx, terminated_handler, 0);
 }
 
@@ -86,8 +71,8 @@ void command_handler()
 			sched_remove(atoi(get_argv(command, 1)));
 			break;
 		case 's':
+			printf("simulating...\n");
 			swapcontext(&gg_ctx, &sched_ctx);
-			sched_start();
 			break;
 		case 'p':
 			sched_ps();
@@ -131,16 +116,14 @@ int sched_add(const char *t_n, const char t_q)
 	// printf("name: %s\ntime: %c\n", t_n, t_q);
 	ucontext_t task;
 	getcontext(&task);
-	// task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
-	//                            MAP_PRIVATE | MAP_ANON, -1, 0);
-	// task.uc_stack.ss_size = SIGSTKSZ;
-	task.uc_stack.ss_size = 1024 * 1024 * 8;
-	task.uc_stack.ss_sp = malloc(1024 * 1024 * 8);
+	task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	                           MAP_PRIVATE | MAP_ANON, -1, 0);
+	task.uc_stack.ss_size = SIGSTKSZ;
+	task.uc_stack.ss_flags = 0;
 	if (!task.uc_stack.ss_sp) {
 		perror("malloc");
 		exit(1);
 	}
-	// task.uc_stack.ss_flags = 0;
 	task.uc_link = &terhd_ctx;
 
 	if (strcmp(t_n, "task1") == 0) {
@@ -170,18 +153,6 @@ int sched_add(const char *t_n, const char t_q)
 void sched_remove(const int pid)
 {
 	printf("pid: %d\n", pid);
-}
-
-void sched_start()
-{
-	printf("simulating...\n");
-	if (is_ctrlz) {
-		is_ctrlz = false;
-		is_simulating = true;
-		setcontext(&sched_ctx);
-	} else {
-		setcontext(&sched_ctx);
-	}
 }
 
 void sched_ps()
@@ -241,7 +212,11 @@ void signal_handler(int signum)
 
 void scheduler()
 {
-	if (is_simulating) {
+	if (is_ctrlz) {
+		is_ctrlz = false;
+		is_simulating = true;
+	}
+	if (is_simulating && now_pcb != NULL) {
 		is_simulating = false;
 		printf("enq\n");
 		now_pcb->state = TASK_READY;
@@ -251,12 +226,9 @@ void scheduler()
 	while (ready_queue != NULL && ready_queue->size(ready_queue) != 0) {
 		printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
-		// struct timeval t_out;
-		// gettimeofday(&t_out, NULL);
-		// now_pcb->q_t += ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
-		// printf("time: %ld - %ld = %ld\n", t_out.tv_usec / 1000,
-		// now_pcb->t_in.tv_usec / 1000,
-		// ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000);
+		struct timeval t_out;
+		gettimeofday(&t_out, NULL);
+		now_pcb->q_t += ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
 		is_having_now = true;
 		now_pcb->state = TASK_RUNNING;
 		/*timer*/
@@ -271,19 +243,21 @@ void scheduler()
 		ucontext_t gg_ctx;
 		swapcontext(&gg_ctx, &now_pcb->ctx);
 	}
+	ucontext_t gg_ctx;
+	swapcontext(&gg_ctx, &shell_ctx);
 }
 
 void terminated_handler()
 {
 	while (1) {
-		is_ctrlz = true;
+		// is_ctrlz = true;
 		is_simulating = false;
+		now_pcb->state = TASK_TERMINATED;
 		now_pcb = NULL;
 		printf("terminated\n");
 		fflush(stdout);
-		// now_pcb->state = TASK_TERMINATED;
 		ucontext_t gg_ctx;
-		swapcontext(&gg_ctx, &shell_ctx);
+		swapcontext(&gg_ctx, &sched_ctx);
 	}
 }
 
