@@ -18,6 +18,16 @@ int main()
 	sched_add("task_tt", 'S');
 
 	// ready_queue->display(ready_queue);
+
+	// ucontext_t task, gg_ctx;
+	// getcontext(&task);
+	// task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	//                            MAP_PRIVATE | MAP_ANON, -1, 0);
+	// task.uc_stack.ss_size = SIGSTKSZ;
+	// task.uc_stack.ss_flags = 0;
+	// task.uc_link = &terhd_ctx;
+	// makecontext(&task, task_tt, 0);
+	// swapcontext(&gg_ctx, &task);
 	command_handler();
 
 	printf("finished\n");
@@ -46,10 +56,24 @@ void init_context()
 	sighd_ctx.uc_stack.ss_size = SIGSTKSZ;
 	sighd_ctx.uc_stack.ss_flags = 0;
 	makecontext(&sighd_ctx, signal_handler, 0);
+
+	getcontext(&terhd_ctx);
+	// terhd_ctx.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	//                                 MAP_PRIVATE | MAP_ANON, -1, 0);
+	// terhd_ctx.uc_stack.ss_size = SIGSTKSZ;
+	// terhd_ctx.uc_stack.ss_flags = 0;
+	terhd_ctx.uc_stack.ss_size = 1024 * 1024 * 8;
+	terhd_ctx.uc_stack.ss_sp = malloc(1024 * 1024 * 8);
+	if (!terhd_ctx.uc_stack.ss_sp) {
+		perror("malloc");
+		exit(1);
+	}
+	makecontext(&terhd_ctx, terminated_handler, 0);
 }
 
 void command_handler()
 {
+	ucontext_t gg_ctx;
 	while (1) {
 		printf("$ ");
 		char command[20];
@@ -62,6 +86,7 @@ void command_handler()
 			sched_remove(atoi(get_argv(command, 1)));
 			break;
 		case 's':
+			swapcontext(&gg_ctx, &sched_ctx);
 			sched_start();
 			break;
 		case 'p':
@@ -106,11 +131,17 @@ int sched_add(const char *t_n, const char t_q)
 	// printf("name: %s\ntime: %c\n", t_n, t_q);
 	ucontext_t task;
 	getcontext(&task);
-	task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
-	                           MAP_PRIVATE | MAP_ANON, -1, 0);
-	task.uc_stack.ss_size = SIGSTKSZ;
-	task.uc_stack.ss_flags = 0;
-	// task.uc_link = &main_ctx; // TODO ternumated
+	// task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	//                            MAP_PRIVATE | MAP_ANON, -1, 0);
+	// task.uc_stack.ss_size = SIGSTKSZ;
+	task.uc_stack.ss_size = 1024 * 1024 * 8;
+	task.uc_stack.ss_sp = malloc(1024 * 1024 * 8);
+	if (!task.uc_stack.ss_sp) {
+		perror("malloc");
+		exit(1);
+	}
+	// task.uc_stack.ss_flags = 0;
+	task.uc_link = &terhd_ctx;
 
 	if (strcmp(t_n, "task1") == 0) {
 		makecontext(&task, task1, 0);
@@ -160,8 +191,8 @@ void sched_ps()
 	if (ready_queue == NULL || ready_queue->size(ready_queue) == 0) {
 		return;
 	}
-	if (is_having_now) {
-		printf("%d\t%s\t%s\t%d\n",
+	if (is_having_now && now_pcb != NULL) {
+		printf("%d\t%s\t%s\t%ld\n",
 		       now_pcb->pid,
 		       now_pcb->name,
 		       get_pcb_state(now_pcb->state),
@@ -169,7 +200,7 @@ void sched_ps()
 	}
 	node *curr = ready_queue->head;
 	while (curr != NULL) {
-		printf("%d\t%s\t%s\t%d\n",
+		printf("%d\t%s\t%s\t%ld\n",
 		       curr->pcb->pid,
 		       curr->pcb->name,
 		       get_pcb_state(curr->pcb->state),
@@ -203,7 +234,7 @@ void signal_handler(int signum)
 		swapcontext(&now_ctx, &shell_ctx);
 	} else if (signum == SIGALRM) {
 		is_simulating = true;
-		if (!is_ctrlz)
+		if (!is_ctrlz && now_pcb != NULL)
 			swapcontext(&now_pcb->ctx, &sched_ctx);
 	}
 }
@@ -211,17 +242,18 @@ void signal_handler(int signum)
 void scheduler()
 {
 	if (is_simulating) {
+		is_simulating = false;
 		printf("enq\n");
 		now_pcb->state = TASK_READY;
-		gettimeofday(&now_pcb->t_in, NULL);
+		// gettimeofday(&now_pcb->t_in, NULL);
 		ready_queue->enq(ready_queue, create_node(now_pcb));
 	}
 	while (ready_queue != NULL && ready_queue->size(ready_queue) != 0) {
 		printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
-		struct timeval t_out;
-		gettimeofday(&t_out, NULL);
-		now_pcb->q_t += ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
+		// struct timeval t_out;
+		// gettimeofday(&t_out, NULL);
+		// now_pcb->q_t += ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
 		// printf("time: %ld - %ld = %ld\n", t_out.tv_usec / 1000,
 		// now_pcb->t_in.tv_usec / 1000,
 		// ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000);
@@ -229,8 +261,8 @@ void scheduler()
 		now_pcb->state = TASK_RUNNING;
 		/*timer*/
 		memset(&it, 0, sizeof it);
-		// it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
-		it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
+		it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
+		// it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
 		// it.it_interval.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
 		if (setitimer(ITIMER_REAL, &it, 0)) {
 			perror("setitimer");
@@ -238,6 +270,20 @@ void scheduler()
 		}
 		ucontext_t gg_ctx;
 		swapcontext(&gg_ctx, &now_pcb->ctx);
+	}
+}
+
+void terminated_handler()
+{
+	while (1) {
+		is_ctrlz = true;
+		is_simulating = false;
+		now_pcb = NULL;
+		printf("terminated\n");
+		fflush(stdout);
+		// now_pcb->state = TASK_TERMINATED;
+		ucontext_t gg_ctx;
+		swapcontext(&gg_ctx, &shell_ctx);
 	}
 }
 
@@ -377,7 +423,7 @@ PCB *create_pcb(const char *name, const char t_q, const ucontext_t ctx)
 	tmp->pid = pid_count++;
 	strncpy(tmp->name, name, sizeof(tmp->name));
 	tmp->t_q = t_q;
-	tmp->t_l = (t_q == 'S') ? 10 : 20;
+	// tmp->t_l = (t_q == 'S') ? 10 : 20;
 	tmp->state = TASK_READY;
 	tmp->q_t = 0;
 	tmp->ctx = ctx;
@@ -387,17 +433,20 @@ PCB *create_pcb(const char *name, const char t_q, const ucontext_t ctx)
 void task_t(void)
 {
 	struct timespec delay = {1, 0};
-	for (unsigned int i = 1;; i += 2) {
+	for (unsigned int i = 1; i < 10; i += 2) {
 		printf("odd:%d\n", i);
 		// printf("test~\n");
 		nanosleep(&delay, 0);
 	}
+	// setcontext(&terhd_ctx);
+	// ucontext_t gg_ctx;
+	// swapcontext(&gg_ctx, &terhd_ctx);
 }
 
 void task_tt(void)
 {
 	struct timespec delay = {1, 0};
-	for (unsigned int i = 2;; i += 2) {
+	for (unsigned int i = 2; i < 10; i += 2) {
 		printf("eve:%d\n", i);
 		// printf("test~\n");
 		nanosleep(&delay, 0);
