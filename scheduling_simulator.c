@@ -15,16 +15,6 @@ int main()
 
 	sched_add("task_t", 'L');
 	sched_add("task_tt", 'S');
-	// hw_task_create("task_t");
-	// hw_task_create("task_t");
-	// hw_task_create("task_t");
-	// hw_task_create("task_t");
-	// // node *t = ready_queue->deq(ready_queue);
-	// swapcontext(&main_ctx, &t->pcb->ctx);
-	// t = ready_queue->deq(ready_queue);
-	// swapcontext(&main_ctx, &t->pcb->ctx);
-	// t = ready_queue->deq(ready_queue);
-	// swapcontext(&main_ctx, &t->pcb->ctx);
 
 	// ready_queue->display(ready_queue);
 	while (1) {
@@ -109,14 +99,11 @@ int sched_add(const char *t_n, const char t_q)
 	// printf("name: %s\ntime: %c\n", t_n, t_q);
 	ucontext_t task;
 	getcontext(&task);
-	// task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
-	//                            MAP_PRIVATE | MAP_ANON, -1, 0);
-	// task.uc_stack.ss_size = SIGSTKSZ;
-	// task.uc_stack.ss_flags = 0;
-	// task.uc_link = &main_ctx;
-	task.uc_stack.ss_sp = malloc(8192);
-	task.uc_stack.ss_size = 8192;
+	task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	                           MAP_PRIVATE | MAP_ANON, -1, 0);
+	task.uc_stack.ss_size = SIGSTKSZ;
 	task.uc_stack.ss_flags = 0;
+	// task.uc_link = &main_ctx; // TODO ternumated
 
 	if (strcmp(t_n, "task1") == 0) {
 		makecontext(&task, task1, 0);
@@ -151,79 +138,6 @@ void sched_start()
 {
 	printf("simulating...\n");
 	setcontext(&sched_ctx);
-	/*
-	getcontext(&sched_ctx);
-	if (ready_queue->size(ready_queue) == 0) {
-	    is_simulating = false;
-	    return;
-	}
-	if (now_pcb == NULL) {
-	    is_simulating = false;
-	    // } else {
-	    node *de = ready_queue->deq(ready_queue);
-	    now_pcb = de->pcb;
-	    is_simulating = true;
-	    // }
-	} else {
-	    if (now_pcb->t_l <= 0) {
-	        printf("time out\n");
-	        while (ready_queue->size(ready_queue) != 0) {
-	            if (switch_context == 1) {
-	                switch_context = 0;
-	                printf("deq\n");
-	                PCB *next_pcb = ready_queue->deq(ready_queue)->pcb;
-	                PCB *last_pcb = now_pcb;
-	                last_pcb->t_l = (last_pcb->t_q == 'S') ? 10 : 20;
-	                now_pcb = next_pcb;
-	                printf("time left: %d\n", now_pcb->t_l);
-	                now_pcb->t_l -= 10;
-	                // ready_queue->enq(ready_queue, create_node(last_pcb));
-	                swapcontext(&last_pcb->ctx, &now_pcb->ctx);
-	            }
-	        }
-	        is_simulating = false;
-	        return;
-	    } else {
-	        printf("time left: %d\n", now_pcb->t_l);
-	        now_pcb->t_l -= 10;
-	        getcontext(&main_ctx);
-	        swapcontext(&main_ctx, &now_pcb->ctx);
-	    }
-	}
-	*/
-	// node *first = ready_queue->deq(ready_queue);
-	// if (first == NULL) {
-	//     is_simulating = false;
-	//     return;
-	// }
-	// now_pcb = first->pcb;
-	// now_ctx = now_pcb->ctx;
-	// getcontext(&sched_ctx);
-	// if ((now_pcb->t_l) <= 0) {
-	//     printf("time out\n");
-	//     while (ready_queue->size(ready_queue) != 0) {
-	//         if (switch_context == 1) {
-	//             switch_context = 0;
-	//             printf("deq\n");
-	//             PCB *next_pcb = ready_queue->deq(ready_queue)->pcb;
-	//             ucontext_t next_ctx = next_pcb->ctx;
-	//             ready_queue->enq(ready_queue, create_node(now_pcb));
-	//             now_pcb = next_pcb;
-	//             ucontext_t tnow_ctx = now_ctx;
-	//             now_ctx = now_pcb->ctx;
-	//             printf("time left: %d\n", now_pcb->t_l);
-	//             now_pcb->t_l -= 10;
-	//             // getcontext(&main_ctx);
-	//             swapcontext(&tnow_ctx, &next_ctx);
-	//         }
-	//     }
-	//     is_simulating = false;
-	// } else {
-	//     printf("time left: %d\n", now_pcb->t_l);
-	//     now_pcb->t_l -= 10;
-	//     getcontext(&main_ctx);
-	//     swapcontext(&main_ctx, &now_ctx);
-	// }
 }
 
 void sched_ps()
@@ -262,18 +176,11 @@ char *get_pcb_state(const int state)
 
 void signal_handler(int signum)
 {
-	// ucontext_t task;
 	if (signum == SIGTSTP) {
 		printf("ctrl-z\n");
 	} else if (signum == SIGALRM) {
 		is_simulating = true;
 		swapcontext(&now_pcb->ctx, &sched_ctx);
-		// printf("time: %d\n", pid_count++);
-		//     switch_context = 1;
-		//     if (is_simulating) {
-		//         // getcontext(&task);
-		//         setcontext(&sched_ctx);
-		//     }
 	}
 }
 
@@ -286,17 +193,14 @@ void scheduler()
 	while (ready_queue->size(ready_queue) != 0) {
 		printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
-
 		/*timer*/
 		struct itimerval it;
 		memset(&it, 0, sizeof it);
-		it.it_interval.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2);
-		it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2);
+		it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
 		if (setitimer(ITIMER_REAL, &it, 0)) {
 			perror("setitimer");
 			exit(1);
 		}
-
 		ucontext_t gg_ctx;
 		swapcontext(&gg_ctx, &now_pcb->ctx);
 	}

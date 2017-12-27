@@ -65,7 +65,6 @@ typedef struct Queue {
 } Queue;
 
 /* Global Variable */
-ucontext_t main_ctx;
 ucontext_t now_ctx;
 ucontext_t sighd_ctx; // for function signal_handler()
 ucontext_t sched_ctx; // for function scheduler()
