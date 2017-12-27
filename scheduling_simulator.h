@@ -67,8 +67,7 @@ typedef struct Queue {
 /* Global Variable */
 ucontext_t main_ctx;
 ucontext_t now_ctx;
-ucontext_t tmout_ctx; // for function time_out_handler()
-ucontext_t ctrlz_ctx; // for function ctrlz_handler()
+ucontext_t sighd_ctx; // for function signal_handler()
 ucontext_t sched_ctx; // for function scheduler()
 ucontext_t shell_ctx; // for function command_handler()
 PCB *now_pcb;
@@ -78,7 +77,7 @@ bool is_simulating;
 Queue *ready_queue;
 Queue *waiting_queue;
 
-void init_main_context();
+void init_context();
 void command_handler();
 char *get_argv(const char *command, const int num);
 int sched_add(const char *t_n, const char t_q);
