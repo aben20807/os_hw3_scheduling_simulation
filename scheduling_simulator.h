@@ -69,10 +69,12 @@ ucontext_t now_ctx;
 ucontext_t sighd_ctx; // for function signal_handler()
 ucontext_t sched_ctx; // for function scheduler()
 ucontext_t shell_ctx; // for function command_handler()
+ucontext_t store_ctx; // for function store_running_task()
 PCB *now_pcb;
 int pid_count;
-bool is_simulating;
-bool is_ctrlz;
+static volatile sig_atomic_t is_simulating;
+static volatile sig_atomic_t is_ctrlz;
+static volatile sig_atomic_t is_having_now;
 Queue *ready_queue;
 Queue *waiting_queue;
 struct itimerval it;
@@ -86,6 +88,7 @@ void sched_remove(const int pid);
 void sched_start();
 void sched_ps();
 void signal_handler();
+void store_running_task();
 void scheduler();
 char *get_pcb_state(const int state);
 
