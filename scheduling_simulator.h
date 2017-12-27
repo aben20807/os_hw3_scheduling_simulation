@@ -43,6 +43,7 @@ typedef struct PCB {
 	ucontext_t ctx; // context
 	char name[10];
 	char t_q;       // time quantum
+	struct timeval t_in; // timestamp when enter ready queue
 } PCB;
 
 /*

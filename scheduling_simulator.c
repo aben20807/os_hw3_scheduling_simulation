@@ -213,17 +213,24 @@ void scheduler()
 	if (is_simulating) {
 		printf("enq\n");
 		now_pcb->state = TASK_READY;
+		gettimeofday(&now_pcb->t_in, NULL);
 		ready_queue->enq(ready_queue, create_node(now_pcb));
 	}
 	while (ready_queue != NULL && ready_queue->size(ready_queue) != 0) {
 		printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
+		struct timeval t_out;
+		gettimeofday(&t_out, NULL);
+		now_pcb->q_t += ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
+		// printf("time: %ld - %ld = %ld\n", t_out.tv_usec / 1000,
+		// now_pcb->t_in.tv_usec / 1000,
+		// ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000);
 		is_having_now = true;
 		now_pcb->state = TASK_RUNNING;
 		/*timer*/
 		memset(&it, 0, sizeof it);
-		it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
-		// it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
+		// it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
+		it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
 		// it.it_interval.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
 		if (setitimer(ITIMER_REAL, &it, 0)) {
 			perror("setitimer");
