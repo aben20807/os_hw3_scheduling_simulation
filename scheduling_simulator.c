@@ -46,13 +46,6 @@ void init_context()
 	sighd_ctx.uc_stack.ss_size = SIGSTKSZ;
 	sighd_ctx.uc_stack.ss_flags = 0;
 	makecontext(&sighd_ctx, signal_handler, 0);
-
-	getcontext(&store_ctx);
-	store_ctx.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
-	                                MAP_PRIVATE | MAP_ANON, -1, 0);
-	store_ctx.uc_stack.ss_size = SIGSTKSZ;
-	store_ctx.uc_stack.ss_flags = 0;
-	makecontext(&store_ctx, store_running_task, 0);
 }
 
 void command_handler()
@@ -201,19 +194,12 @@ void signal_handler(int signum)
 		is_ctrlz = true;
 		is_simulating = false;
 		printf("ctrl-z\n");
-		swapcontext(&now_ctx, &store_ctx);
+		swapcontext(&now_ctx, &shell_ctx);
 	} else if (signum == SIGALRM) {
 		is_simulating = true;
 		if (!is_ctrlz)
 			swapcontext(&now_pcb->ctx, &sched_ctx);
 	}
-}
-
-void store_running_task()
-{
-	// ready_queue->enq(ready_queue, create_node(now_pcb));
-	ucontext_t gg_ctx;
-	swapcontext(&gg_ctx, &shell_ctx);
 }
 
 void scheduler()
