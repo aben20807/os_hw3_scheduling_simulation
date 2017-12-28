@@ -99,11 +99,6 @@ void command_handler()
 		case 'p':
 			sched_ps();
 			break;
-		case 'c':
-			deleq(&ready_queue);
-			deleq(&terminated_queue);
-			deleq(&waiting_queue);
-			break;
 		case 'e':
 		case 'q':
 			deleq(&ready_queue);
@@ -133,17 +128,17 @@ char *get_argv(const char *command, const int num)
 	int argc = 0;
 	for (token = strsep(&s, delim); token != NULL; token = strsep(&s, delim)) {
 		if (argc == num) {
+			// FREE(s);
 			return token;
 		}
 		argc++;
 	}
-	FREE(s);
-	return "\0";
+	return "S";
 }
 
 int sched_add(const char *t_n, const char t_q)
 {
-	// printf("name: %s\ntime: %c\n", t_n, t_q);
+	printf("name: %s\ntime: %c\n", t_n, t_q);
 	ucontext_t task;
 	getcontext(&task);
 	task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
