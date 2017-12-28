@@ -17,10 +17,11 @@ int main()
 	signal(SIGTSTP, signal_handler);
 	signal(SIGALRM, signal_handler);
 
-	sched_add("task_t", 'L');
-	sched_add("task_tt", 'S');
-	// sched_add("task1", 'L');
-	// sched_add("task2", 'S');
+	// sched_add("task_t", 'L');
+	// sched_add("task_tt", 'S');
+	sched_add("task1", 'L');
+	sched_add("task2", 'S');
+	sched_add("task3", 'S');
 
 	// ready_queue->display(ready_queue);
 
@@ -196,11 +197,12 @@ void sched_ps()
 	printf("waiting:\n");
 	curr = waiting_queue->head;
 	while (curr != NULL) {
-		printf("%d\t%s\t%s\t%ld\n",
+		printf("%d\t%s\t%s\t%ld\t%ld\n",
 		       curr->pcb->pid,
 		       curr->pcb->name,
 		       get_pcb_state(curr->pcb->state),
-		       curr->pcb->q_t);
+		       curr->pcb->q_t,
+		       curr->pcb->s_t);
 		curr = curr->next;
 	}
 	printf("terminated:\n");
@@ -284,15 +286,40 @@ void scheduler()
 		}
 		/*timer*/
 		memset(&it, 0, sizeof it);
-		it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
-		it.it_interval.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
-		// it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
-		// it.it_interval.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
+		// it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
+		// it.it_interval.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
+		it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
+		it.it_interval.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
 		if (setitimer(ITIMER_REAL, &it, 0)) {
 			perror("setitimer");
 			exit(1);
 		}
 		swapcontext(&gg_ctx, &now_pcb->ctx);
+	}
+	while (waiting_queue != NULL && waiting_queue->size(waiting_queue) != 0) {
+		int waiting_num = waiting_queue->size(waiting_queue);
+		while (waiting_num--) {
+			PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
+			tmp_pcb->s_t -= 10;
+			if (tmp_pcb->s_t <= 0) {
+				printf("suspend time out\n");
+				ready_queue->enq(ready_queue, create_node(tmp_pcb));
+				ucontext_t gg_ctx;
+				swapcontext(&gg_ctx, &sched_ctx);
+				continue;
+			}
+			waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
+		}
+		/*timer*/
+		memset(&it, 0, sizeof it);
+		// it.it_value.tv_sec = 1; // TODO ms
+		// it.it_interval.tv_sec = 1; // TODO ms
+		it.it_value.tv_usec = 10000; // TODO ms
+		it.it_interval.tv_usec = 10000; // TODO ms
+		if (setitimer(ITIMER_REAL, &it, 0)) {
+			perror("setitimer");
+			exit(1);
+		}
 	}
 	swapcontext(&gg_ctx, &shell_ctx);
 }
@@ -474,7 +501,7 @@ PCB *create_pcb(const char *name, const char t_q, const ucontext_t ctx)
 
 void task_t(void)
 {
-	hw_suspend(200);
+	hw_suspend(2000);
 	struct timespec delay = {1, 0};
 	for (unsigned int i = 1; i < 10; i += 2) {
 		printf("odd:%d\n", i);
