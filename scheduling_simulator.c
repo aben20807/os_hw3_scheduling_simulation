@@ -18,6 +18,8 @@ int main()
 	signal(SIGALRM, signal_handler);
 
 	// sched_add("task_t", 'L');
+	// sched_add("task_t", 'L');
+	// sched_add("task_t", 'L');
 	// sched_add("task_tt", 'S');
 	sched_add("task1", 'L');
 	sched_add("task2", 'S');
@@ -317,16 +319,17 @@ void scheduler()
 		is_having_now = true;
 		now_pcb->state = TASK_RUNNING;
 		/*Update waiting tasks' suspend time*/
-		int waiting_num = waiting_queue->size(waiting_queue);
-		while (waiting_num--) {
-			PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
-			tmp_pcb->s_t -= past_time;
-			if (tmp_pcb->s_t <= 0) {
-				ready_queue->enq(ready_queue, create_node(tmp_pcb));
-				continue;
-			}
-			waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
-		}
+		// int waiting_num = waiting_queue->size(waiting_queue);
+		// while (waiting_num--) {
+		//     PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
+		//     tmp_pcb->s_t -= past_time;
+		//     if (tmp_pcb->s_t <= 0) {
+		//         ready_queue->enq(ready_queue, create_node(tmp_pcb));
+		//         continue;
+		//     }
+		//     waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
+		// }
+		update_waiting_queue(past_time);
 		/*timer*/
 		memset(&it, 0, sizeof it);
 		// it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
@@ -341,18 +344,21 @@ void scheduler()
 	}
 	/*When ready_queue empty, keep update suspend time with every tasks*/
 	while (waiting_queue != NULL && waiting_queue->size(waiting_queue) != 0) {
-		int waiting_num = waiting_queue->size(waiting_queue);
-		while (waiting_num--) {
-			PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
-			tmp_pcb->s_t -= 10;
-			if (tmp_pcb->s_t <= 0) {
-				ready_queue->enq(ready_queue, create_node(tmp_pcb));
-				ucontext_t gg_ctx;
-				swapcontext(&gg_ctx, &sched_ctx);
-				continue;
-			}
-			waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
-		}
+		// int waiting_num = waiting_queue->size(waiting_queue);
+		// while (waiting_num--) {
+		//     PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
+		//     tmp_pcb->s_t -= 10;
+		//     if (tmp_pcb->s_t <= 0) {
+		//         ready_queue->enq(ready_queue, create_node(tmp_pcb));
+		//         // ucontext_t gg_ctx;
+		//         // swapcontext(&gg_ctx, &sched_ctx);
+		//         continue;
+		//     }
+		//     waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
+		// }
+		update_waiting_queue(10);
+		ucontext_t gg_ctx;
+		swapcontext(&gg_ctx, &sched_ctx);
 		/*timer*/
 		memset(&it, 0, sizeof it);
 		// it.it_value.tv_sec = 1; // TODO ms
@@ -366,6 +372,20 @@ void scheduler()
 	}
 	/*All tasks are terminated*/
 	swapcontext(&gg_ctx, &shell_ctx);
+}
+
+void update_waiting_queue(const int past_time)
+{
+	int waiting_num = waiting_queue->size(waiting_queue);
+	while (waiting_num--) {
+		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
+		tmp_pcb->s_t -= past_time;
+		if (tmp_pcb->s_t <= 0) {
+			ready_queue->enq(ready_queue, create_node(tmp_pcb));
+			continue;
+		}
+		waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
+	}
 }
 
 void terminated_handler()
@@ -557,7 +577,7 @@ PCB *create_pcb(const char *name, const char t_q, const ucontext_t ctx)
 
 void task_t(void)
 {
-	hw_suspend(2000);
+	hw_suspend(200000);
 	struct timespec delay = {1, 0};
 	for (unsigned int i = 1; i < 10; i += 2) {
 		printf("odd:%d\n", i);

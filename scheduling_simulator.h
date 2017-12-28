@@ -92,6 +92,7 @@ void sched_ps();
 void signal_handler();
 void store_running_task();
 void scheduler();
+void update_waiting_queue(const int past_time);
 void terminated_handler();
 char *get_pcb_state(const int state);
 void save_suspend();
