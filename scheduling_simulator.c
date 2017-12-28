@@ -183,31 +183,35 @@ void sched_remove(const int pid)
 		return;
 	}
 	int num = waiting_queue->size(waiting_queue);
+	node *tmp_node = NULL;
 	while (num--) {
-		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
-		if (tmp_pcb->pid == pid) {
-			FREE(tmp_pcb);
+		tmp_node = waiting_queue->deq(waiting_queue);
+		if (tmp_node->pcb->pid == pid) {
+			FREE(tmp_node->pcb);
+			FREE(tmp_node);
 			return;
 		}
-		waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
+		waiting_queue->enq(waiting_queue, create_node(tmp_node->pcb));
 	}
 	num = ready_queue->size(ready_queue);
 	while (num--) {
-		PCB *tmp_pcb = ready_queue->deq(ready_queue)->pcb;
-		if (tmp_pcb->pid == pid) {
-			FREE(tmp_pcb);
+		tmp_node = ready_queue->deq(ready_queue);
+		if (tmp_node->pcb->pid == pid) {
+			FREE(tmp_node->pcb);
+			FREE(tmp_node);
 			return;
 		}
-		ready_queue->enq(ready_queue, create_node(tmp_pcb));
+		ready_queue->enq(ready_queue, create_node(tmp_node->pcb));
 	}
 	num = terminated_queue->size(terminated_queue);
 	while (num--) {
-		PCB *tmp_pcb = terminated_queue->deq(terminated_queue)->pcb;
-		if (tmp_pcb->pid == pid) {
-			FREE(tmp_pcb);
+		tmp_node = terminated_queue->deq(terminated_queue);
+		if (tmp_node->pcb->pid == pid) {
+			FREE(tmp_node->pcb);
+			FREE(tmp_node);
 			return;
 		}
-		terminated_queue->enq(terminated_queue, create_node(tmp_pcb));
+		terminated_queue->enq(terminated_queue, create_node(tmp_node->pcb));
 	}
 	printf("pid not found\n");
 }
