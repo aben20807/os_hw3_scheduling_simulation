@@ -2,8 +2,6 @@
 
 int main()
 {
-	// printf("start\n");
-
 	pid_count = 1;
 	initq(&ready_queue);
 	initq(&waiting_queue);
@@ -16,27 +14,7 @@ int main()
 
 	signal(SIGTSTP, signal_handler);
 	signal(SIGALRM, signal_handler);
-
-	// sched_add("task_t", 'L');
-	// sched_add("task_t", 'L');
-	// sched_add("task_tt", 'S');
-	// sched_add("task_tt", 'S');
-	sched_add("task1", 'L');
-	sched_add("task2", 'S');
-	sched_add("task1", 'L');
-	sched_add("task1", 'L');
-	sched_add("task2", 'S');
-	sched_add("task2", 'S');
-	sched_add("task3", 'S');
-	sched_add("task4", 'L');
-	sched_add("task5", 'L');
-	sched_add("task6", 'S');
-
-	// ready_queue->display(ready_queue);
-
 	command_handler();
-
-	// printf("finished\n");
 	return 0;
 }
 
@@ -162,10 +140,6 @@ int sched_add(const char *t_n, const char t_q)
 		makecontext(&task, task5, 0);
 	} else if (strcmp(t_n, "task6") == 0) {
 		makecontext(&task, task6, 0);
-	} else if (strcmp(t_n, "task_t") == 0) {
-		makecontext(&task, task_t, 0);
-	} else if (strcmp(t_n, "task_tt") == 0) {
-		makecontext(&task, task_tt, 0);
 	} else {
 		return -1;
 	}
@@ -569,25 +543,4 @@ PCB *create_pcb(const char *name, const char t_q, const ucontext_t ctx)
 	tmp->q_t = 0;
 	tmp->ctx = ctx;
 	return tmp;
-}
-
-void task_t(void)
-{
-	// hw_suspend(200000);
-	struct timespec delay = {1, 0};
-	// for (unsigned int i = 1; i < 10; i += 2) {
-	for (unsigned int i = 1;; i += 2) {
-		printf("odd:%d\n", i);
-		nanosleep(&delay, 0);
-	}
-}
-
-void task_tt(void)
-{
-	struct timespec delay = {1, 0};
-	// for (unsigned int i = 2; i < 11; i += 2) {
-	for (unsigned int i = 2;; i += 2) {
-		printf("eve:%d\n", i);
-		nanosleep(&delay, 0);
-	}
 }
