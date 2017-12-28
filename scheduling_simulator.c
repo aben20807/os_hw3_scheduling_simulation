@@ -128,7 +128,6 @@ char *get_argv(const char *command, const int num)
 	int argc = 0;
 	for (token = strsep(&s, delim); token != NULL; token = strsep(&s, delim)) {
 		if (argc == num) {
-			// FREE(s);
 			return token;
 		}
 		argc++;
@@ -138,7 +137,7 @@ char *get_argv(const char *command, const int num)
 
 int sched_add(const char *t_n, const char t_q)
 {
-	printf("name: %s\ntime: %c\n", t_n, t_q);
+	// printf("name: %s\ntime: %c\n", t_n, t_q);
 	ucontext_t task;
 	getcontext(&task);
 	task.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
@@ -306,6 +305,7 @@ void scheduler()
 	} else if (is_simulating && now_pcb != NULL) { // && !is_terminated) {
 		is_simulating = false;
 		now_pcb->state = TASK_READY;
+		gettimeofday(&(now_pcb->t_in), NULL);
 		ready_queue->enq(ready_queue, create_node(now_pcb));
 	}
 
