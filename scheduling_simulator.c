@@ -173,7 +173,7 @@ void sched_ps()
 		       get_pcb_state(now_pcb->state),
 		       now_pcb->q_t);
 	}
-	printf("ready:\n");
+	// printf("ready:\n");
 	node *curr = ready_queue->head;
 	while (curr != NULL) {
 		printf("%d\t%s\t%s\t%ld\n",
@@ -183,7 +183,7 @@ void sched_ps()
 		       curr->pcb->q_t);
 		curr = curr->next;
 	}
-	printf("terminated:\n");
+	// printf("terminated:\n");
 	curr = terminated_queue->head;
 	while (curr != NULL) {
 		printf("%d\t%s\t%s\t%ld\n",
@@ -227,25 +227,24 @@ void signal_handler(int signum)
 
 void scheduler()
 {
+	ucontext_t gg_ctx;
 	if (is_ctrlz) {
 		is_ctrlz = false;
-		// is_simulating = true;
+		swapcontext(&gg_ctx, &now_ctx);
 	} else if (is_terminated) {
 		is_terminated = false;
 	} else if (is_simulating && now_pcb != NULL) { // && !is_terminated) {
 		is_simulating = false;
-		// is_terminated = false;
 		printf("enq: %d\n", now_pcb->pid);
 		now_pcb->state = TASK_READY;
-		// gettimeofday(&now_pcb->t_in, NULL);
 		ready_queue->enq(ready_queue, create_node(now_pcb));
-		ready_queue->display(ready_queue);
+		// ready_queue->display(ready_queue);
 	}
 
 	while (ready_queue != NULL && ready_queue->size(ready_queue) != 0) {
 		printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
-		ready_queue->display(ready_queue);
+		// ready_queue->display(ready_queue);
 		struct timeval t_out;
 		gettimeofday(&t_out, NULL);
 		now_pcb->q_t += ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
@@ -254,16 +253,15 @@ void scheduler()
 		/*timer*/
 		memset(&it, 0, sizeof it);
 		it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
+		it.it_interval.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
 		// it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
 		// it.it_interval.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
 		if (setitimer(ITIMER_REAL, &it, 0)) {
 			perror("setitimer");
 			exit(1);
 		}
-		ucontext_t gg_ctx;
 		swapcontext(&gg_ctx, &now_pcb->ctx);
 	}
-	ucontext_t gg_ctx;
 	swapcontext(&gg_ctx, &shell_ctx);
 }
 
