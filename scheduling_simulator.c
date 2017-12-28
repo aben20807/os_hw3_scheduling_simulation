@@ -19,9 +19,12 @@ int main()
 
 	// sched_add("task_t", 'L');
 	// sched_add("task_tt", 'S');
-	sched_add("task1", 'L');
-	sched_add("task2", 'S');
+	// sched_add("task1", 'L');
+	// sched_add("task2", 'S');
 	sched_add("task3", 'S');
+	sched_add("task4", 'L');
+	sched_add("task5", 'L');
+	sched_add("task6", 'S');
 
 	// ready_queue->display(ready_queue);
 
@@ -360,12 +363,36 @@ void save_suspend()
 
 void hw_wakeup_pid(int pid)
 {
+	int waiting_num = waiting_queue->size(waiting_queue);
+	while (waiting_num--) {
+		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
+		tmp_pcb->s_t -= 10;
+		if (tmp_pcb->pid == pid) {
+			printf("suspend time out\n");
+			ready_queue->enq(ready_queue, create_node(tmp_pcb));
+			return;
+		}
+		waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
+	}
 	return;
 }
 
 int hw_wakeup_taskname(char *task_name)
 {
-	return 0;
+	int count = 0;
+	int waiting_num = waiting_queue->size(waiting_queue);
+	while (waiting_num--) {
+		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
+		tmp_pcb->s_t -= 10;
+		if (strcmp(tmp_pcb->name, task_name) == 0) {
+			printf("suspend time out\n");
+			count++;
+			ready_queue->enq(ready_queue, create_node(tmp_pcb));
+			continue;
+		}
+		waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
+	}
+	return count;
 }
 
 int hw_task_create(char *task_name)
