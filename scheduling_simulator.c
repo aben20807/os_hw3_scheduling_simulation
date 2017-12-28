@@ -21,16 +21,20 @@ int main()
 	// sched_add("task_tt", 'S');
 	// sched_add("task1", 'L');
 	// sched_add("task2", 'S');
-	sched_add("task3", 'S');
-	sched_add("task4", 'L');
-	sched_add("task5", 'L');
+	// sched_add("task1", 'L');
+	// sched_add("task1", 'L');
+	// sched_add("task2", 'S');
+	// sched_add("task2", 'S');
+	// sched_add("task3", 'S');
+	// sched_add("task4", 'L');
+	// sched_add("task5", 'L');
 	sched_add("task6", 'S');
 
 	// ready_queue->display(ready_queue);
 
 	command_handler();
 
-	printf("finished\n");
+	// printf("finished\n");
 	return 0;
 }
 
@@ -94,6 +98,7 @@ void command_handler()
 			sched_ps();
 			break;
 		case 'e':
+		case 'q':
 			deleq(&ready_queue);
 			deleq(&terminated_queue);
 			deleq(&waiting_queue);
@@ -187,7 +192,7 @@ void sched_ps()
 		       get_pcb_state(now_pcb->state),
 		       now_pcb->q_t);
 	}
-	printf("ready:\n");
+	// printf("ready:\n");
 	node *curr = ready_queue->head;
 	while (curr != NULL) {
 		printf("%d\t%s\t%s\t%ld\n",
@@ -197,7 +202,7 @@ void sched_ps()
 		       curr->pcb->q_t);
 		curr = curr->next;
 	}
-	printf("waiting:\n");
+	// printf("waiting:\n");
 	curr = waiting_queue->head;
 	while (curr != NULL) {
 		printf("%d\t%s\t%s\t%ld\t%ld\n",
@@ -208,7 +213,7 @@ void sched_ps()
 		       curr->pcb->s_t);
 		curr = curr->next;
 	}
-	printf("terminated:\n");
+	// printf("terminated:\n");
 	curr = terminated_queue->head;
 	while (curr != NULL) {
 		printf("%d\t%s\t%s\t%ld\n",
@@ -260,28 +265,25 @@ void scheduler()
 		is_terminated = false;
 	} else if (is_simulating && now_pcb != NULL) { // && !is_terminated) {
 		is_simulating = false;
-		// printf("enq: %d\n", now_pcb->pid);
 		now_pcb->state = TASK_READY;
 		ready_queue->enq(ready_queue, create_node(now_pcb));
-		// ready_queue->display(ready_queue);
 	}
 
 	while (ready_queue != NULL && ready_queue->size(ready_queue) != 0) {
-		// printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
-		// ready_queue->display(ready_queue);
+		/*Update queueing time*/
 		struct timeval t_out;
 		gettimeofday(&t_out, NULL);
 		long past_time = ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
 		now_pcb->q_t += past_time;
 		is_having_now = true;
 		now_pcb->state = TASK_RUNNING;
+		/*Update waiting tasks' suspend time*/
 		int waiting_num = waiting_queue->size(waiting_queue);
 		while (waiting_num--) {
 			PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
 			tmp_pcb->s_t -= past_time;
 			if (tmp_pcb->s_t <= 0) {
-				printf("suspend time out\n");
 				ready_queue->enq(ready_queue, create_node(tmp_pcb));
 				continue;
 			}
@@ -291,21 +293,21 @@ void scheduler()
 		memset(&it, 0, sizeof it);
 		// it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
 		// it.it_interval.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
-		it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
-		it.it_interval.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000); // TODO ms
+		it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000);
+		it.it_interval.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000);
 		if (setitimer(ITIMER_REAL, &it, 0)) {
 			perror("setitimer");
 			exit(1);
 		}
 		swapcontext(&gg_ctx, &now_pcb->ctx);
 	}
+	/*When ready_queue empty, keep update suspend time with every tasks*/
 	while (waiting_queue != NULL && waiting_queue->size(waiting_queue) != 0) {
 		int waiting_num = waiting_queue->size(waiting_queue);
 		while (waiting_num--) {
 			PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
 			tmp_pcb->s_t -= 10;
 			if (tmp_pcb->s_t <= 0) {
-				printf("suspend time out\n");
 				ready_queue->enq(ready_queue, create_node(tmp_pcb));
 				ucontext_t gg_ctx;
 				swapcontext(&gg_ctx, &sched_ctx);
@@ -317,36 +319,30 @@ void scheduler()
 		memset(&it, 0, sizeof it);
 		// it.it_value.tv_sec = 1; // TODO ms
 		// it.it_interval.tv_sec = 1; // TODO ms
-		it.it_value.tv_usec = 10000; // TODO ms
-		it.it_interval.tv_usec = 10000; // TODO ms
+		it.it_value.tv_usec = 10000;
+		it.it_interval.tv_usec = 10000;
 		if (setitimer(ITIMER_REAL, &it, 0)) {
 			perror("setitimer");
 			exit(1);
 		}
 	}
+	/*All tasks are terminated*/
 	swapcontext(&gg_ctx, &shell_ctx);
 }
 
 void terminated_handler()
 {
-	while (1) {
-		// is_ctrlz = true;
-		is_simulating = false;
-		now_pcb->state = TASK_TERMINATED;
-		terminated_queue->enq(terminated_queue, create_node(now_pcb));
-		// terminated_queue->display(terminated_queue);
-		now_pcb = NULL;
-		printf("terminated\n");
-		fflush(stdout);
-		is_terminated = true;
-		ucontext_t gg_ctx;
-		swapcontext(&gg_ctx, &sched_ctx);
-	}
+	is_simulating = false;
+	now_pcb->state = TASK_TERMINATED;
+	terminated_queue->enq(terminated_queue, create_node(now_pcb));
+	now_pcb = NULL;
+	is_terminated = true;
+	ucontext_t gg_ctx;
+	swapcontext(&gg_ctx, &sched_ctx);
 }
 
 void hw_suspend(int msec_10)
 {
-	printf("suspend\n");
 	now_pcb->s_t = msec_10 * 10;
 	now_pcb->state = TASK_WAITING;
 	swapcontext(&now_pcb->ctx, &savsu_ctx);
@@ -368,7 +364,6 @@ void hw_wakeup_pid(int pid)
 		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
 		tmp_pcb->s_t -= 10;
 		if (tmp_pcb->pid == pid) {
-			printf("suspend time out\n");
 			ready_queue->enq(ready_queue, create_node(tmp_pcb));
 			return;
 		}
@@ -385,7 +380,6 @@ int hw_wakeup_taskname(char *task_name)
 		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
 		tmp_pcb->s_t -= 10;
 		if (strcmp(tmp_pcb->name, task_name) == 0) {
-			printf("suspend time out\n");
 			count++;
 			ready_queue->enq(ready_queue, create_node(tmp_pcb));
 			continue;
@@ -398,7 +392,6 @@ int hw_wakeup_taskname(char *task_name)
 int hw_task_create(char *task_name)
 {
 	return sched_add(task_name, 'S');
-	// return 0; // the pid of created task name
 }
 
 void initq(Queue **q_ptr)
