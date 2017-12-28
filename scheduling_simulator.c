@@ -99,6 +99,11 @@ void command_handler()
 		case 'p':
 			sched_ps();
 			break;
+		case 'c':
+			deleq(&ready_queue);
+			deleq(&terminated_queue);
+			deleq(&waiting_queue);
+			break;
 		case 'e':
 		case 'q':
 			deleq(&ready_queue);
@@ -319,16 +324,6 @@ void scheduler()
 		is_having_now = true;
 		now_pcb->state = TASK_RUNNING;
 		/*Update waiting tasks' suspend time*/
-		// int waiting_num = waiting_queue->size(waiting_queue);
-		// while (waiting_num--) {
-		//     PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
-		//     tmp_pcb->s_t -= past_time;
-		//     if (tmp_pcb->s_t <= 0) {
-		//         ready_queue->enq(ready_queue, create_node(tmp_pcb));
-		//         continue;
-		//     }
-		//     waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
-		// }
 		update_waiting_queue(past_time);
 		/*timer*/
 		memset(&it, 0, sizeof it);
@@ -344,18 +339,6 @@ void scheduler()
 	}
 	/*When ready_queue empty, keep update suspend time with every tasks*/
 	while (waiting_queue != NULL && waiting_queue->size(waiting_queue) != 0) {
-		// int waiting_num = waiting_queue->size(waiting_queue);
-		// while (waiting_num--) {
-		//     PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
-		//     tmp_pcb->s_t -= 10;
-		//     if (tmp_pcb->s_t <= 0) {
-		//         ready_queue->enq(ready_queue, create_node(tmp_pcb));
-		//         // ucontext_t gg_ctx;
-		//         // swapcontext(&gg_ctx, &sched_ctx);
-		//         continue;
-		//     }
-		//     waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
-		// }
 		update_waiting_queue(10);
 		ucontext_t gg_ctx;
 		swapcontext(&gg_ctx, &sched_ctx);
