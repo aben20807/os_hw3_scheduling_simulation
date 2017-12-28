@@ -223,7 +223,8 @@ void sched_ps()
 		return;
 	}
 	if (is_having_now && now_pcb != NULL) {
-		printf("%d\t%s\t%s\t%ld\n",
+		printf("%*d  %s\t%s\t%ld\n",
+		       4,
 		       now_pcb->pid,
 		       now_pcb->name,
 		       get_pcb_state(now_pcb->state),
@@ -232,7 +233,8 @@ void sched_ps()
 	// printf("ready:\n");
 	node *curr = ready_queue->head;
 	while (curr != NULL) {
-		printf("%d\t%s\t%s\t%ld\n",
+		printf("%*d  %s\t%s\t%ld\n",
+		       4,
 		       curr->pcb->pid,
 		       curr->pcb->name,
 		       get_pcb_state(curr->pcb->state),
@@ -243,7 +245,8 @@ void sched_ps()
 	curr = waiting_queue->head;
 	while (curr != NULL) {
 		// printf("%d\t%s\t%s\t%ld\t%ld\n",
-		printf("%d\t%s\t%s\t%ld\t\n",
+		printf("%*d  %s\t%s\t%ld\t\n",
+		       4,
 		       curr->pcb->pid,
 		       curr->pcb->name,
 		       get_pcb_state(curr->pcb->state),
@@ -255,7 +258,8 @@ void sched_ps()
 	// printf("terminated:\n");
 	curr = terminated_queue->head;
 	while (curr != NULL) {
-		printf("%d\t%s\t%s\t%ld\n",
+		printf("%*d  %s\t%s\t%ld\n",
+		       4,
 		       curr->pcb->pid,
 		       curr->pcb->name,
 		       get_pcb_state(curr->pcb->state),
@@ -359,6 +363,7 @@ void update_waiting_queue(const int past_time)
 		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
 		tmp_pcb->s_t -= past_time;
 		if (tmp_pcb->s_t <= 0) {
+			tmp_pcb->state = TASK_READY;
 			ready_queue->enq(ready_queue, create_node(tmp_pcb));
 			continue;
 		}
