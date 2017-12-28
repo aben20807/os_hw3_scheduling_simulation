@@ -19,7 +19,7 @@ int main()
 
 	// sched_add("task_t", 'L');
 	// sched_add("task_t", 'L');
-	// sched_add("task_t", 'L');
+	// sched_add("task_tt", 'S');
 	// sched_add("task_tt", 'S');
 	sched_add("task1", 'L');
 	sched_add("task2", 'S');
@@ -170,6 +170,7 @@ int sched_add(const char *t_n, const char t_q)
 		return -1;
 	}
 	PCB *tmp = create_pcb(t_n, t_q, task);
+	gettimeofday(&(tmp->t_in), NULL);
 	ready_queue->enq(ready_queue, create_node(tmp));
 	return tmp->pid;
 }
@@ -180,7 +181,7 @@ void sched_remove(const int pid)
 		return;
 	}
 	if (now_pcb->pid == pid) {
-		printf("Cannot remove running task\n");
+		FREE(now_pcb);
 		return;
 	}
 	int num = waiting_queue->size(waiting_queue);
@@ -289,7 +290,7 @@ void signal_handler(int signum)
 	if (signum == SIGTSTP) {
 		is_ctrlz = true;
 		is_simulating = false;
-		printf("ctrl-z\n");
+		printf("\n");
 		swapcontext(&now_ctx, &shell_ctx);
 	} else if (signum == SIGALRM) {
 		is_simulating = true;
@@ -300,9 +301,9 @@ void signal_handler(int signum)
 
 void scheduler()
 {
-	ucontext_t gg_ctx;
-	if (is_ctrlz) {
+	if (is_ctrlz && now_pcb != NULL) {
 		is_ctrlz = false;
+		ucontext_t gg_ctx;
 		swapcontext(&gg_ctx, &now_ctx);
 	} else if (is_terminated) {
 		is_terminated = false;
@@ -319,6 +320,10 @@ void scheduler()
 		struct timeval t_out;
 		gettimeofday(&t_out, NULL);
 		long past_time = ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
+		// printf("%ld-%ld=%ld\n",
+		// t_out.tv_usec / 1000,
+		// now_pcb->t_in.tv_usec / 1000,
+		// past_time);
 		now_pcb->q_t += past_time;
 		is_having_now = true;
 		now_pcb->state = TASK_RUNNING;
@@ -334,6 +339,7 @@ void scheduler()
 			perror("setitimer");
 			exit(1);
 		}
+		ucontext_t gg_ctx;
 		swapcontext(&gg_ctx, &now_pcb->ctx);
 	}
 	/*When ready_queue empty, keep update suspend time with every tasks*/
@@ -353,6 +359,7 @@ void scheduler()
 		}
 	}
 	/*All tasks are terminated*/
+	ucontext_t gg_ctx;
 	swapcontext(&gg_ctx, &shell_ctx);
 }
 
@@ -386,6 +393,10 @@ void hw_suspend(int msec_10)
 {
 	now_pcb->s_t = msec_10 * 10;
 	now_pcb->state = TASK_WAITING;
+	struct timeval t_out;
+	gettimeofday(&t_out, NULL);
+	long past_time = ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
+	now_pcb->q_t += past_time;
 	swapcontext(&now_pcb->ctx, &savsu_ctx);
 	return;
 }
@@ -404,6 +415,7 @@ void hw_wakeup_pid(int pid)
 	while (waiting_num--) {
 		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
 		if (tmp_pcb->pid == pid) {
+			gettimeofday(&(tmp_pcb->t_in), NULL);
 			ready_queue->enq(ready_queue, create_node(tmp_pcb));
 			return;
 		}
@@ -420,6 +432,7 @@ int hw_wakeup_taskname(char *task_name)
 		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
 		if (strcmp(tmp_pcb->name, task_name) == 0) {
 			count++;
+			gettimeofday(&(tmp_pcb->t_in), NULL);
 			ready_queue->enq(ready_queue, create_node(tmp_pcb));
 			continue;
 		}
@@ -560,9 +573,10 @@ PCB *create_pcb(const char *name, const char t_q, const ucontext_t ctx)
 
 void task_t(void)
 {
-	hw_suspend(200000);
+	// hw_suspend(200000);
 	struct timespec delay = {1, 0};
-	for (unsigned int i = 1; i < 10; i += 2) {
+	// for (unsigned int i = 1; i < 10; i += 2) {
+	for (unsigned int i = 1;; i += 2) {
 		printf("odd:%d\n", i);
 		nanosleep(&delay, 0);
 	}
@@ -571,7 +585,8 @@ void task_t(void)
 void task_tt(void)
 {
 	struct timespec delay = {1, 0};
-	for (unsigned int i = 2; i < 11; i += 2) {
+	// for (unsigned int i = 2; i < 11; i += 2) {
+	for (unsigned int i = 2;; i += 2) {
 		printf("eve:%d\n", i);
 		nanosleep(&delay, 0);
 	}
