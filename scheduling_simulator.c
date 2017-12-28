@@ -3,17 +3,20 @@
 int main()
 {
 	pid_count = 1;
+	/*init queue*/
 	initq(&ready_queue);
 	initq(&waiting_queue);
 	initq(&terminated_queue);
 	init_context();
+	/*Simulation flag settin*/
 	is_simulating = false;
 	is_ctrlz = false;
 	is_having_now = false;
 	is_terminated = false;
-
+	/*Signal handler setting*/
 	signal(SIGTSTP, signal_handler);
 	signal(SIGALRM, signal_handler);
+	/*Shell mode*/
 	command_handler();
 	return 0;
 }
@@ -293,23 +296,17 @@ void scheduler()
 	while (ready_queue != NULL && ready_queue->size(ready_queue) != 0) {
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
 		/*Update queueing time*/
-		// struct timeval t_out;
-		// gettimeofday(&t_out, NULL);
-		// long past_time = ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
+		long past_time = update_queueing_time(&now_pcb);
 		// printf("%ld-%ld=%ld\n",
 		// t_out.tv_usec / 1000,
 		// now_pcb->t_in.tv_usec / 1000,
 		// past_time);
-		// now_pcb->q_t += past_time;
-		long past_time = update_queueing_time(&now_pcb);
 		is_having_now = true;
 		now_pcb->state = TASK_RUNNING;
 		/*Update waiting tasks' suspend time*/
 		update_waiting_queue(past_time);
 		/*timer*/
 		memset(&it, 0, sizeof it);
-		// it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
-		// it.it_interval.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
 		it.it_value.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000);
 		it.it_interval.tv_usec = ((now_pcb->t_q == 'S') ? 10000 : 20000);
 		if (setitimer(ITIMER_REAL, &it, 0)) {
@@ -326,8 +323,6 @@ void scheduler()
 		swapcontext(&gg_ctx, &sched_ctx);
 		/*timer*/
 		memset(&it, 0, sizeof it);
-		// it.it_value.tv_sec = 1; // TODO ms
-		// it.it_interval.tv_sec = 1; // TODO ms
 		it.it_value.tv_usec = 10000;
 		it.it_interval.tv_usec = 10000;
 		if (setitimer(ITIMER_REAL, &it, 0)) {
@@ -370,10 +365,6 @@ void store_ready_task_time()
 	int ready_num = ready_queue->size(ready_queue);
 	while (ready_num--) {
 		PCB *tmp_pcb = ready_queue->deq(ready_queue)->pcb;
-		// struct timeval t_out;
-		// gettimeofday(&t_out, NULL);
-		// long past_time = ((t_out.tv_usec - tmp_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
-		// now_pcb->q_t += past_time;
 		update_queueing_time(&tmp_pcb);
 		ready_queue->enq(ready_queue, create_node(tmp_pcb));
 	}
@@ -393,10 +384,6 @@ void terminated_handler()
 {
 	is_simulating = false;
 	now_pcb->state = TASK_TERMINATED;
-	// struct timeval t_out;
-	// gettimeofday(&t_out, NULL);
-	// long past_time = ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
-	// now_pcb->q_t += past_time;
 	update_queueing_time(&now_pcb);
 	terminated_queue->enq(terminated_queue, create_node(now_pcb));
 	now_pcb = NULL;
@@ -409,10 +396,6 @@ void hw_suspend(int msec_10)
 {
 	now_pcb->s_t = msec_10 * 10;
 	now_pcb->state = TASK_WAITING;
-	// struct timeval t_out;
-	// gettimeofday(&t_out, NULL);
-	// long past_time = ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
-	// now_pcb->q_t += past_time;
 	update_queueing_time(&now_pcb);
 	swapcontext(&now_pcb->ctx, &savsu_ctx);
 	return;
@@ -432,6 +415,7 @@ void hw_wakeup_pid(int pid)
 	while (waiting_num--) {
 		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
 		if (tmp_pcb->pid == pid) {
+			tmp_pcb->state = TASK_READY;
 			gettimeofday(&(tmp_pcb->t_in), NULL);
 			ready_queue->enq(ready_queue, create_node(tmp_pcb));
 			return;
@@ -449,6 +433,7 @@ int hw_wakeup_taskname(char *task_name)
 		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
 		if (strcmp(tmp_pcb->name, task_name) == 0) {
 			count++;
+			tmp_pcb->state = TASK_READY;
 			gettimeofday(&(tmp_pcb->t_in), NULL);
 			ready_queue->enq(ready_queue, create_node(tmp_pcb));
 			continue;
