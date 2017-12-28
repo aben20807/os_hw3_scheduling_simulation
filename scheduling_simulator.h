@@ -38,7 +38,7 @@ enum TASK_STATE {
 typedef struct PCB {
 	int pid;
 	int state;
-	// int t_l;        // time left
+	long s_t;        // suspend time
 	long q_t;        // queueing time
 	ucontext_t ctx; // context
 	char name[10];
@@ -71,6 +71,7 @@ ucontext_t sighd_ctx; // for function signal_handler()
 ucontext_t sched_ctx; // for function scheduler()
 ucontext_t shell_ctx; // for function command_handler()
 ucontext_t terhd_ctx; // for function terminated_handler()
+ucontext_t savsu_ctx; // for function save_suspend()
 PCB *now_pcb;
 int pid_count;
 static volatile sig_atomic_t is_simulating;
@@ -93,6 +94,7 @@ void store_running_task();
 void scheduler();
 void terminated_handler();
 char *get_pcb_state(const int state);
+void save_suspend();
 
 void hw_suspend(int msec_10);
 void hw_wakeup_pid(int pid);

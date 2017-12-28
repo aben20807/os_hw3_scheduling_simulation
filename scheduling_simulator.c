@@ -19,6 +19,8 @@ int main()
 
 	sched_add("task_t", 'L');
 	sched_add("task_tt", 'S');
+	// sched_add("task1", 'L');
+	// sched_add("task2", 'S');
 
 	// ready_queue->display(ready_queue);
 
@@ -57,6 +59,13 @@ void init_context()
 	terhd_ctx.uc_stack.ss_size = SIGSTKSZ;
 	terhd_ctx.uc_stack.ss_flags = 0;
 	makecontext(&terhd_ctx, terminated_handler, 0);
+
+	getcontext(&savsu_ctx);
+	savsu_ctx.uc_stack.ss_sp = mmap(NULL, SIGSTKSZ, PROT_READ | PROT_WRITE,
+	                                MAP_PRIVATE | MAP_ANON, -1, 0);
+	savsu_ctx.uc_stack.ss_size = SIGSTKSZ;
+	savsu_ctx.uc_stack.ss_flags = 0;
+	makecontext(&savsu_ctx, save_suspend, 0);
 }
 
 void command_handler()
@@ -83,6 +92,7 @@ void command_handler()
 		case 'e':
 			deleq(&ready_queue);
 			deleq(&terminated_queue);
+			deleq(&waiting_queue);
 			goto end;
 			break;
 		default:
@@ -163,7 +173,7 @@ void sched_ps()
 {
 	// TODO other queues
 	printf("ps\n");
-	if (ready_queue == NULL || terminated_queue == NULL) {
+	if (ready_queue == NULL || terminated_queue == NULL || waiting_queue == NULL) {
 		return;
 	}
 	if (is_having_now && now_pcb != NULL) {
@@ -173,7 +183,7 @@ void sched_ps()
 		       get_pcb_state(now_pcb->state),
 		       now_pcb->q_t);
 	}
-	// printf("ready:\n");
+	printf("ready:\n");
 	node *curr = ready_queue->head;
 	while (curr != NULL) {
 		printf("%d\t%s\t%s\t%ld\n",
@@ -183,7 +193,17 @@ void sched_ps()
 		       curr->pcb->q_t);
 		curr = curr->next;
 	}
-	// printf("terminated:\n");
+	printf("waiting:\n");
+	curr = waiting_queue->head;
+	while (curr != NULL) {
+		printf("%d\t%s\t%s\t%ld\n",
+		       curr->pcb->pid,
+		       curr->pcb->name,
+		       get_pcb_state(curr->pcb->state),
+		       curr->pcb->q_t);
+		curr = curr->next;
+	}
+	printf("terminated:\n");
 	curr = terminated_queue->head;
 	while (curr != NULL) {
 		printf("%d\t%s\t%s\t%ld\n",
@@ -235,21 +255,33 @@ void scheduler()
 		is_terminated = false;
 	} else if (is_simulating && now_pcb != NULL) { // && !is_terminated) {
 		is_simulating = false;
-		printf("enq: %d\n", now_pcb->pid);
+		// printf("enq: %d\n", now_pcb->pid);
 		now_pcb->state = TASK_READY;
 		ready_queue->enq(ready_queue, create_node(now_pcb));
 		// ready_queue->display(ready_queue);
 	}
 
 	while (ready_queue != NULL && ready_queue->size(ready_queue) != 0) {
-		printf("deq\n");
+		// printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
 		// ready_queue->display(ready_queue);
 		struct timeval t_out;
 		gettimeofday(&t_out, NULL);
-		now_pcb->q_t += ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
+		long past_time = ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
+		now_pcb->q_t += past_time;
 		is_having_now = true;
 		now_pcb->state = TASK_RUNNING;
+		int waiting_num = waiting_queue->size(waiting_queue);
+		while (waiting_num--) {
+			PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
+			tmp_pcb->s_t -= past_time;
+			if (tmp_pcb->s_t <= 0) {
+				printf("suspend time out\n");
+				ready_queue->enq(ready_queue, create_node(tmp_pcb));
+				continue;
+			}
+			waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
+		}
 		/*timer*/
 		memset(&it, 0, sizeof it);
 		it.it_value.tv_sec = ((now_pcb->t_q == 'S') ? 1 : 2); // TODO ms
@@ -284,7 +316,19 @@ void terminated_handler()
 
 void hw_suspend(int msec_10)
 {
+	printf("suspend\n");
+	now_pcb->s_t = msec_10 * 10;
+	now_pcb->state = TASK_WAITING;
+	swapcontext(&now_pcb->ctx, &savsu_ctx);
 	return;
+}
+
+void save_suspend()
+{
+	waiting_queue->enq(waiting_queue, create_node(now_pcb));
+	now_pcb = NULL;
+	ucontext_t gg_ctx;
+	swapcontext(&gg_ctx, &sched_ctx);
 }
 
 void hw_wakeup_pid(int pid)
@@ -430,6 +474,7 @@ PCB *create_pcb(const char *name, const char t_q, const ucontext_t ctx)
 
 void task_t(void)
 {
+	hw_suspend(200);
 	struct timespec delay = {1, 0};
 	for (unsigned int i = 1; i < 10; i += 2) {
 		printf("odd:%d\n", i);
