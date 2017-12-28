@@ -76,8 +76,10 @@ int pid_count;
 static volatile sig_atomic_t is_simulating;
 static volatile sig_atomic_t is_ctrlz;
 static volatile sig_atomic_t is_having_now;
+static volatile sig_atomic_t is_terminated;
 Queue *ready_queue;
 Queue *waiting_queue;
+Queue *terminated_queue;
 struct itimerval it;
 
 void init_context();

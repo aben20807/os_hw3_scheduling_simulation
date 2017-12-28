@@ -6,10 +6,13 @@ int main()
 
 	pid_count = 1;
 	initq(&ready_queue);
+	initq(&waiting_queue);
+	initq(&terminated_queue);
 	init_context();
 	is_simulating = false;
 	is_ctrlz = false;
 	is_having_now = false;
+	is_terminated = false;
 
 	signal(SIGTSTP, signal_handler);
 	signal(SIGALRM, signal_handler);
@@ -79,6 +82,7 @@ void command_handler()
 			break;
 		case 'e':
 			deleq(&ready_queue);
+			deleq(&terminated_queue);
 			goto end;
 			break;
 		default:
@@ -159,7 +163,7 @@ void sched_ps()
 {
 	// TODO other queues
 	printf("ps\n");
-	if (ready_queue == NULL || ready_queue->size(ready_queue) == 0) {
+	if (ready_queue == NULL || terminated_queue == NULL) {
 		return;
 	}
 	if (is_having_now && now_pcb != NULL) {
@@ -169,7 +173,18 @@ void sched_ps()
 		       get_pcb_state(now_pcb->state),
 		       now_pcb->q_t);
 	}
+	printf("ready:\n");
 	node *curr = ready_queue->head;
+	while (curr != NULL) {
+		printf("%d\t%s\t%s\t%ld\n",
+		       curr->pcb->pid,
+		       curr->pcb->name,
+		       get_pcb_state(curr->pcb->state),
+		       curr->pcb->q_t);
+		curr = curr->next;
+	}
+	printf("terminated:\n");
+	curr = terminated_queue->head;
 	while (curr != NULL) {
 		printf("%d\t%s\t%s\t%ld\n",
 		       curr->pcb->pid,
@@ -214,18 +229,23 @@ void scheduler()
 {
 	if (is_ctrlz) {
 		is_ctrlz = false;
-		is_simulating = true;
-	}
-	if (is_simulating && now_pcb != NULL) {
+		// is_simulating = true;
+	} else if (is_terminated) {
+		is_terminated = false;
+	} else if (is_simulating && now_pcb != NULL) { // && !is_terminated) {
 		is_simulating = false;
-		printf("enq\n");
+		// is_terminated = false;
+		printf("enq: %d\n", now_pcb->pid);
 		now_pcb->state = TASK_READY;
 		// gettimeofday(&now_pcb->t_in, NULL);
 		ready_queue->enq(ready_queue, create_node(now_pcb));
+		ready_queue->display(ready_queue);
 	}
+
 	while (ready_queue != NULL && ready_queue->size(ready_queue) != 0) {
 		printf("deq\n");
 		now_pcb = ready_queue->deq(ready_queue)->pcb;
+		ready_queue->display(ready_queue);
 		struct timeval t_out;
 		gettimeofday(&t_out, NULL);
 		now_pcb->q_t += ((t_out.tv_usec - now_pcb->t_in.tv_usec) / 1000 + 1000) % 1000;
@@ -253,9 +273,12 @@ void terminated_handler()
 		// is_ctrlz = true;
 		is_simulating = false;
 		now_pcb->state = TASK_TERMINATED;
+		terminated_queue->enq(terminated_queue, create_node(now_pcb));
+		// terminated_queue->display(terminated_queue);
 		now_pcb = NULL;
 		printf("terminated\n");
 		fflush(stdout);
+		is_terminated = true;
 		ucontext_t gg_ctx;
 		swapcontext(&gg_ctx, &sched_ctx);
 	}
@@ -342,7 +365,7 @@ bool enq(Queue *self, node *item)
 node *deq(Queue *self)
 {
 	if ((self == NULL) || self->size(self) == 0) {
-		// printf("0\n");
+		printf("0\n");
 		return NULL;
 	}
 	node *tmp = self->tail;
@@ -350,7 +373,8 @@ node *deq(Queue *self)
 		self->tail = self->tail->prev;
 		self->tail->next = NULL;
 	} else {
-		self->tail = self->head;
+		self->tail = NULL;
+		self->head = NULL;
 		self->count = 0;
 		return tmp;
 	}
@@ -363,17 +387,19 @@ node *deq(Queue *self)
  */
 bool display(Queue *self)
 {
-	if (self == NULL || self->size(self) == 0) {
+	if (self == NULL) {
 		return false;
 	}
 	printf("head->\n");
 	node *curr = self->head;
 	int count = 0;
 	while (curr != NULL) {
-		printf("%d:\n%d\n%s\n",
+		printf("%d: %d\t%s\t%s\t%ld\n",
 		       count++,
 		       curr->pcb->pid,
-		       curr->pcb->name);
+		       curr->pcb->name,
+		       get_pcb_state(curr->pcb->state),
+		       curr->pcb->q_t);
 		curr = curr->next;
 	}
 	printf("<-tail\n");
@@ -420,7 +446,7 @@ void task_t(void)
 void task_tt(void)
 {
 	struct timespec delay = {1, 0};
-	for (unsigned int i = 2; i < 10; i += 2) {
+	for (unsigned int i = 2; i < 11; i += 2) {
 		printf("eve:%d\n", i);
 		// printf("test~\n");
 		nanosleep(&delay, 0);
