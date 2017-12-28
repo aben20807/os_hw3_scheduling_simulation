@@ -19,15 +19,15 @@ int main()
 
 	// sched_add("task_t", 'L');
 	// sched_add("task_tt", 'S');
-	// sched_add("task1", 'L');
-	// sched_add("task2", 'S');
-	// sched_add("task1", 'L');
-	// sched_add("task1", 'L');
-	// sched_add("task2", 'S');
-	// sched_add("task2", 'S');
-	// sched_add("task3", 'S');
-	// sched_add("task4", 'L');
-	// sched_add("task5", 'L');
+	sched_add("task1", 'L');
+	sched_add("task2", 'S');
+	sched_add("task1", 'L');
+	sched_add("task1", 'L');
+	sched_add("task2", 'S');
+	sched_add("task2", 'S');
+	sched_add("task3", 'S');
+	sched_add("task4", 'L');
+	sched_add("task5", 'L');
 	sched_add("task6", 'S');
 
 	// ready_queue->display(ready_queue);
@@ -175,13 +175,45 @@ int sched_add(const char *t_n, const char t_q)
 
 void sched_remove(const int pid)
 {
-	printf("pid: %d\n", pid);
+	if (ready_queue == NULL || terminated_queue == NULL || waiting_queue == NULL) {
+		return;
+	}
+	if (now_pcb->pid == pid) {
+		printf("Cannot remove running task\n");
+		return;
+	}
+	int num = waiting_queue->size(waiting_queue);
+	while (num--) {
+		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
+		if (tmp_pcb->pid == pid) {
+			FREE(tmp_pcb);
+			return;
+		}
+		waiting_queue->enq(waiting_queue, create_node(tmp_pcb));
+	}
+	num = ready_queue->size(ready_queue);
+	while (num--) {
+		PCB *tmp_pcb = ready_queue->deq(ready_queue)->pcb;
+		if (tmp_pcb->pid == pid) {
+			FREE(tmp_pcb);
+			return;
+		}
+		ready_queue->enq(ready_queue, create_node(tmp_pcb));
+	}
+	num = terminated_queue->size(terminated_queue);
+	while (num--) {
+		PCB *tmp_pcb = terminated_queue->deq(terminated_queue)->pcb;
+		if (tmp_pcb->pid == pid) {
+			FREE(tmp_pcb);
+			return;
+		}
+		terminated_queue->enq(terminated_queue, create_node(tmp_pcb));
+	}
+	printf("pid not found\n");
 }
 
 void sched_ps()
 {
-	// TODO other queues
-	printf("ps\n");
 	if (ready_queue == NULL || terminated_queue == NULL || waiting_queue == NULL) {
 		return;
 	}
@@ -205,12 +237,14 @@ void sched_ps()
 	// printf("waiting:\n");
 	curr = waiting_queue->head;
 	while (curr != NULL) {
-		printf("%d\t%s\t%s\t%ld\t%ld\n",
+		// printf("%d\t%s\t%s\t%ld\t%ld\n",
+		printf("%d\t%s\t%s\t%ld\t\n",
 		       curr->pcb->pid,
 		       curr->pcb->name,
 		       get_pcb_state(curr->pcb->state),
-		       curr->pcb->q_t,
-		       curr->pcb->s_t);
+		       curr->pcb->q_t //,
+		       // curr->pcb->s_t
+		      );
 		curr = curr->next;
 	}
 	// printf("terminated:\n");
@@ -362,7 +396,6 @@ void hw_wakeup_pid(int pid)
 	int waiting_num = waiting_queue->size(waiting_queue);
 	while (waiting_num--) {
 		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
-		tmp_pcb->s_t -= 10;
 		if (tmp_pcb->pid == pid) {
 			ready_queue->enq(ready_queue, create_node(tmp_pcb));
 			return;
@@ -378,7 +411,6 @@ int hw_wakeup_taskname(char *task_name)
 	int waiting_num = waiting_queue->size(waiting_queue);
 	while (waiting_num--) {
 		PCB *tmp_pcb = waiting_queue->deq(waiting_queue)->pcb;
-		tmp_pcb->s_t -= 10;
 		if (strcmp(tmp_pcb->name, task_name) == 0) {
 			count++;
 			ready_queue->enq(ready_queue, create_node(tmp_pcb));
@@ -525,12 +557,8 @@ void task_t(void)
 	struct timespec delay = {1, 0};
 	for (unsigned int i = 1; i < 10; i += 2) {
 		printf("odd:%d\n", i);
-		// printf("test~\n");
 		nanosleep(&delay, 0);
 	}
-	// setcontext(&terhd_ctx);
-	// ucontext_t gg_ctx;
-	// swapcontext(&gg_ctx, &terhd_ctx);
 }
 
 void task_tt(void)
@@ -538,7 +566,6 @@ void task_tt(void)
 	struct timespec delay = {1, 0};
 	for (unsigned int i = 2; i < 11; i += 2) {
 		printf("eve:%d\n", i);
-		// printf("test~\n");
 		nanosleep(&delay, 0);
 	}
 }
